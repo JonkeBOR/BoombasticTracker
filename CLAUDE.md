@@ -15,6 +15,12 @@ Both folders are currently empty (git does not track empty directories, so they 
 The `.gitignore` is the standard GitHub template for .NET projects (`bin/`, `obj/`, `*.nupkg`, `TestResult.xml`,
 etc.), which signals the intended stack is .NET/C#, but no `.sln`, `.csproj`, or source files exist yet.
 
+## Guidelines
+
+Refer to the files in `docs/` for project guidelines:
+
+- [01-general-guidelines.md](docs/01-general-guidelines.md) — general coding style guidelines.
+
 ## Working in this repo
 
 Since there is no code, no build/test/lint tooling, and no established architecture yet:
