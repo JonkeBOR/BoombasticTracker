@@ -4,30 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-BoombasticTracker is a personal fitness tracker, built as a **Next.js / React / TypeScript** web app
-and PWA installed on the developer's iPhone Home Screen. It tracks strength training and bodyweight
-metrics and derives trends from historical data.
+BoombasticTracker is a personal **Next.js / React / TypeScript** web app and PWA, installed on the
+developer's iPhone Home Screen. Fitness tracking — strength training and bodyweight metrics, and
+trends derived from historical data — is its first feature, not the whole product. Keep routes,
+folders and shared code feature-agnostic unless something genuinely belongs to one feature.
 
 - Persistence is a **Google Sheet** via the Google Sheets API, accessed **only** server-side.
 - Next.js also acts as the **BFF**: the browser calls `/api/*`, never Google.
 - Auth is **Google OAuth**, exchanged for a separate long-lived application session cookie.
 - Hosting must stay within a genuinely **free tier**.
 
-The full architecture is in
-[Architecture-Auth](Specs/FitnessTracker/Architecture/Architecture-Auth) (no file extension). The
-binding principles are in [constitution.md](.specify/memory/constitution.md) — Simplicity First is
-non-negotiable.
+The binding principles are in [constitution.md](.specify/memory/constitution.md) — Simplicity First
+is non-negotiable. Cross-cutting architecture decisions are recorded in
+[docs/architecture/](docs/architecture/).
 
 ## Project state
 
-The lint/format/typecheck toolchain, the agent scripts and the guideline docs exist. **The
-application itself does not exist yet** — there is no `src/`, no `next.config`, and `next`, `react`
-and `react-dom` are not installed. `typecheck` therefore reports `SKIP` until the first `.ts` file
-lands.
+The application foundation exists: Next.js 16 App Router under `src/`, a single landing page at
+`/`, design tokens plus a dark-mode re-declaration in `src/app/globals.css`, CSS Modules beside the
+code that uses them, user-facing text in `src/lib/strings/`, and a typed `src/app/manifest.ts` with
+icons and iOS metadata so the app installs to the Home Screen and launches in standalone mode.
 
-Because `package.json` already exists, `create-next-app` will refuse to scaffold here. The
-foundation work adds `next`, `react`, `react-dom` and their types manually and creates
-`src/app/` by hand.
+Not built yet: Google OAuth, the application session cookie, `src/lib/server/`, Google Sheets
+access, any `/api/*` route handler, `src/components/`, `src/features/`, tests, CI, and a chosen
+hosting provider. Those directories are created when they have a real occupant, not before.
 
 ## Commands
 
@@ -45,9 +45,34 @@ Exit codes: `0` passed or nothing to check, `1` issues found, `2` the check coul
 
 Equivalent raw commands exist as `npm run lint`, `lint:fix`, `format`, `format:check`, `typecheck`.
 
+The app itself runs through npm:
+
+    npm run dev                 # next dev (Turbopack) on http://localhost:3000
+    npm run build               # next build; also type-checks with the local tsc
+    npm run start               # serve the production build
+    npm run dev -- -H 0.0.0.0   # expose on the LAN for iPhone testing
+
+`next lint` no longer exists in Next 16; ESLint runs through `scripts/lint.ps1` or `npm run lint`.
+
 Requires Node.js >= 20.11 and PowerShell 7 (`pwsh`); run `npm install` first.
 
 **Finish every code change with `scripts/check.ps1` exiting 0.**
+
+## Testing on the iPhone
+
+    npm run dev -- -H 0.0.0.0
+
+Then open the phone's Safari at `http://<lan-ip>:3000`. The dev server prints the address as
+`Network:` on startup — it was `http://192.168.0.46:3000` on this machine, but a DHCP lease can
+move it, so trust the printed value over this one.
+
+Expect a Next.js cross-origin dev warning on first load. The fix is `allowedDevOrigins:
+['192.168.0.46']` in `next.config.ts` — hostname only, no scheme and no port.
+
+The LAN check proves layout, safe-area insets and icons. It does **not** prove standalone launch:
+Safari's manifest handling on an insecure origin is not something Apple documents, so the
+chrome-less Home Screen launch is only properly provable from an HTTPS origin. Deploy before
+concluding the PWA works.
 
 ## Guidelines
 
@@ -74,7 +99,18 @@ guideline a review has to catch by reading.
 ## Working in this repo
 
 - Check what exists before assuming structure — most of the app is still unwritten.
-- New architecture or hosting decisions belong in `Specs/FitnessTracker/Architecture`, and any
-  stack change must also be reflected in the constitution.
+- New architecture or hosting decisions belong in `docs/architecture/`, and any stack change must
+  also be reflected in the constitution.
 - Don't add a dependency, abstraction or service without a concrete present need.
-- Update this file's Project state and Commands sections when the application foundation lands.
+- `src/app/page.tsx` with `src/app/page.module.css` and `src/lib/strings/app.ts` is the worked
+  example of the conventions stack — Server Component, CSS Module, design tokens, no bare strings.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

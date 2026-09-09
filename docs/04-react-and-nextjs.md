@@ -1,7 +1,7 @@
 # React and Next.js Conventions
 
-These conventions follow the architecture in `Specs/FitnessTracker/Architecture/Architecture-Auth`
-and the constitution's Server-Mediated Data Access and Session/Identity Separation principles.
+These conventions follow the constitution's Server-Mediated Data Access and Session/Identity
+Separation principles, and the architecture decisions recorded in `docs/architecture/`.
 
 ## Server Components are the default
 

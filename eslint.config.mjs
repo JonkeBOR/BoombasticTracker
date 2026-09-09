@@ -40,7 +40,7 @@ export default tseslint.config(
       nextPlugin.configs['core-web-vitals'],
     ],
     settings: {
-      react: { version: '19.0' },
+      react: { version: 'detect' },
     },
     rules: {
       'react/jsx-no-literals': ['error', { noStrings: true, ignoreProps: true }],

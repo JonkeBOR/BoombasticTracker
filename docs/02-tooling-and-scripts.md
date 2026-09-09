@@ -52,10 +52,10 @@ Branch on the exit code rather than parsing the text.
     LINT: FAIL  errors=2 warnings=0 files=1
       src/app/page.tsx:2:15 error react/forbid-dom-props Prop "style" is forbidden on DOM Nodes
       src/app/page.tsx:2:40 error react/jsx-no-literals Strings not allowed in JSX files: "Hello"
-    TYPECHECK: SKIP  no TypeScript sources yet
+    TYPECHECK: PASS  errors=0
 
 `SKIP` is only produced by `typecheck.ps1`, and only while the repository contains no `.ts`/`.tsx`
-files at all. It disappears on its own once the application exists.
+files at all. The application now exists, so it no longer occurs here.
 
 ## Which to run when
 
