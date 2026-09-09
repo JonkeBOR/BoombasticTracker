@@ -1,22 +1,24 @@
 <!--
 Sync Impact Report
-- Version change: (none) → 1.0.0
-- Modified principles: n/a (initial ratification)
-- Added sections:
-  - Core Principles: I. Simplicity First (NON-NEGOTIABLE), II. Server-Mediated Data Access,
-    III. Session/Identity Separation, IV. Free-Tier Hosting Constraint, V. Self-Documenting Code
-  - Technology Stack (Section 2)
-  - Incremental Decisions (Section 3)
-  - Governance
+- Version change: 1.0.0 → 1.1.0
+- Modified principles:
+  - I. Simplicity First (NON-NEGOTIABLE) — scope broadened from a single-purpose fitness tracker
+    to a personal multi-feature application; principle itself unchanged
+  - II. Server-Mediated Data Access — endpoint examples marked illustrative rather than definitive
+- Added sections: none
 - Removed sections: none
+- Other changes:
+  - Product framing updated throughout: BoombasticTracker is a personal web app/PWA whose first
+    feature is fitness tracking, not a fitness tracker as such
+  - All references to `Specs/FitnessTracker/Architecture` repointed to `docs/architecture/`;
+    the Specs directory has been removed so Spec Kit starts from a clean slate
 - Templates requiring updates:
   - .specify/templates/plan-template.md — ⚠ pending manual review against new principles
   - .specify/templates/spec-template.md — ⚠ pending manual review against new principles
   - .specify/templates/tasks-template.md — ⚠ pending manual review against new principles
   (Dependent templates are read at runtime and are out of scope for this command; flagged for
   the next /speckit-plan or /speckit-tasks run to confirm alignment.)
-- Follow-up TODOs: none — all placeholders resolved from Specs/FitnessTracker/Architecture/Architecture-Auth
-  and docs/01-general-guidelines.md, the only project-specific sources available at ratification time.
+- Follow-up TODOs: none
 -->
 
 # BoombasticTracker Constitution
@@ -24,7 +26,7 @@ Sync Impact Report
 ## Core Principles
 
 ### I. Simplicity First (NON-NEGOTIABLE)
-BoombasticTracker is a personal, low-traffic fitness tracker and a learning project, not an
+BoombasticTracker is a personal, low-traffic application and a learning project, not an
 enterprise system. Every architecture, tooling, or infrastructure decision MUST prefer
 **simple + understandable + secure enough + easy to deploy** over enterprise-style patterns.
 Do not introduce a service, abstraction layer, framework, or infrastructure component unless a
@@ -37,9 +39,9 @@ without the overhead of production-grade infrastructure a personal single-user a
 ### II. Server-Mediated Data Access
 The React client (browser/PWA) MUST NOT communicate directly with Google Sheets or any future
 persistence backend. All data access goes through the Next.js server acting as a
-Backend-for-Frontend (BFF), exposed to the client as application-specific endpoints
-(e.g. `GET /api/workouts`, `POST /api/bodyweight`) rather than raw storage-provider calls. The
-client reasons about application data, never about the Google Sheets API shape directly.
+Backend-for-Frontend (BFF), exposed to the client as application-specific endpoints rather than
+raw storage-provider calls. The client reasons about application data, never about the shape of a
+storage provider's API.
 
 **Rationale**: Keeps storage credentials and provider-specific logic server-side, and allows the
 persistence layer (Google Sheets today) to change later without breaking the client contract.
@@ -82,16 +84,17 @@ React application and the server-side BFF in one deployable unit. Initial persis
 Sheets**, accessed exclusively server-side through the **Google Sheets API**. Authentication:
 **Google OAuth**, using the developer's own Google account/Google Cloud project. Any change to
 this stack (e.g. replacing Google Sheets with another datastore) is a deliberate architectural
-decision and MUST be reflected here and in `Specs/FitnessTracker/Architecture`.
+decision and MUST be reflected here and in `docs/architecture/`.
 
 ## Incremental Decisions
 
 The following remain intentionally undecided until actually needed, per Principle I: exact Google
 OAuth library/session-management implementation, exact hosting provider, Google Sheet schema, API
-endpoint design, data/repository abstraction, UI/component architecture, charting library, PWA
-implementation details, error handling strategy, testing strategy, and CI/CD. Each MUST be decided
-incrementally, at the point of implementation, rather than speculatively up front — and each
-decision should be captured in `Specs/FitnessTracker/Architecture` once made.
+endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
+support, error handling strategy, testing strategy, and CI/CD. Each MUST be decided incrementally,
+at the point of implementation, rather than speculatively up front — and each cross-cutting
+decision should be captured in `docs/architecture/` once made, while feature-scoped decisions
+belong in that feature's Spec Kit documents under `specs/`.
 
 ## Governance
 
@@ -104,8 +107,8 @@ change.
 
 Every `/speckit-plan`, `/speckit-tasks`, and `/speckit-implement` run MUST be checked against
 these principles; any deviation MUST be justified in the relevant plan's Complexity Tracking (or
-equivalent) section rather than silently introduced. Use `docs/01-general-guidelines.md` and
-`Specs/FitnessTracker/Architecture` for detailed runtime/architecture guidance that supplements,
-but does not override, this constitution.
+equivalent) section rather than silently introduced. Use the guideline documents under `docs/`
+and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
+guidance that supplements, but does not override, this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-09
+**Version**: 1.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-09

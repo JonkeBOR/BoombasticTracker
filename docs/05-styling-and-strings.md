@@ -8,8 +8,8 @@ applied, and how they are enforced.
 `react/forbid-dom-props` and `react/forbid-component-props` make a `style` prop an ESLint error.
 Styling belongs in a CSS Module beside the component:
 
-    src/features/workouts/workout-card.tsx
-    src/features/workouts/workout-card.module.css
+    src/features/workouts/WorkoutCard.tsx
+    src/features/workouts/WorkoutCard.module.css
 
 Import it as `styles` and reference `styles.card`. Global CSS is reserved for resets, design tokens
 and typography in `src/app/globals.css`.
