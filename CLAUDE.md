@@ -25,62 +25,40 @@ The application foundation exists: Next.js 16 App Router under `src/`, a single 
 code that uses them, user-facing text in `src/lib/strings/`, and a typed `src/app/manifest.ts` with
 icons and iOS metadata so the app installs to the Home Screen and launches in standalone mode.
 
+Testing exists: Vitest for unit tests colocated as `src/**/*.test.tsx`, Playwright for end-to-end
+tests in `e2e/`, and a Playwright MCP browser configured in `.mcp.json`.
+
 Not built yet: Google OAuth, the application session cookie, `src/lib/server/`, Google Sheets
-access, any `/api/*` route handler, `src/components/`, `src/features/`, tests, CI, and a chosen
-hosting provider. Those directories are created when they have a real occupant, not before.
+access, any `/api/*` route handler, `src/components/`, `src/features/`, CI, and a chosen hosting
+provider. Those directories are created when they have a real occupant, not before.
 
 ## Commands
 
-Prefer these scripts over calling the tools directly — they return a compact summary and meaningful
-exit codes instead of raw tool output.
-
-    pwsh -NoProfile -File scripts/check.ps1        # format + lint + typecheck
+    pwsh -NoProfile -File scripts/check.ps1        # format + lint + typecheck + unit tests
     pwsh -NoProfile -File scripts/check.ps1 -Fix   # fix what can be fixed, then report
-    pwsh -NoProfile -File scripts/lint.ps1
-    pwsh -NoProfile -File scripts/format.ps1 -Write
-    pwsh -NoProfile -File scripts/typecheck.ps1
 
-Add `-Json` for machine-readable output, `-MaxIssues <n>` to cap the listing, `-Help` for usage.
 Exit codes: `0` passed or nothing to check, `1` issues found, `2` the check could not run.
-
-Equivalent raw commands exist as `npm run lint`, `lint:fix`, `format`, `format:check`, `typecheck`.
-
-The app itself runs through npm:
-
-    npm run dev                 # next dev (Turbopack) on http://localhost:3000
-    npm run build               # next build; also type-checks with the local tsc
-    npm run start               # serve the production build
-    npm run dev -- -H 0.0.0.0   # expose on the LAN for iPhone testing
-
-`next lint` no longer exists in Next 16; ESLint runs through `scripts/lint.ps1` or `npm run lint`.
-
-Requires Node.js >= 20.11 and PowerShell 7 (`pwsh`); run `npm install` first.
 
 **Finish every code change with `scripts/check.ps1` exiting 0.**
 
-## Testing on the iPhone
+`next lint` no longer exists in Next 16; ESLint runs through `scripts/lint.ps1` or `npm run lint`.
 
-    npm run dev -- -H 0.0.0.0
+Requires Node.js >= 22.12 and PowerShell 7 (`pwsh`); run `npm install` first, and
+`npm run e2e:install` before the first end-to-end run.
 
-Then open the phone's Safari at `http://<lan-ip>:3000`. The dev server prints the address as
-`Network:` on startup — it was `http://192.168.0.46:3000` on this machine, but a DHCP lease can
-move it, so trust the printed value over this one.
+Detail lives in skills rather than here, so it loads only when it is needed:
 
-Expect a Next.js cross-origin dev warning on first load. The fix is `allowedDevOrigins:
-['192.168.0.46']` in `next.config.ts` — hostname only, no scheme and no port.
-
-The LAN check proves layout, safe-area insets and icons. It does **not** prove standalone launch:
-Safari's manifest handling on an insecure origin is not something Apple documents, so the
-chrome-less Home Screen launch is only properly provable from an HTTPS origin. Deploy before
-concluding the PWA works.
+- **check** — every script, switch, exit code and output shape.
+- **run-app** — running, building and LAN-exposing the app, and iPhone Safari testing.
+- **test** — choosing between Vitest, Playwright and the browser MCP.
 
 ## Guidelines
 
-Read these before writing code. They are enforced by ESLint where enforceable.
+Read these before writing code. They are enforced by ESLint where enforceable. The tooling
+reference that used to sit at `02` is now the `check` skill.
 
 - [01-general-guidelines.md](docs/01-general-guidelines.md) — no comments, no inline CSS, no bare
   strings in markup.
-- [02-tooling-and-scripts.md](docs/02-tooling-and-scripts.md) — the scripts, switches, exit codes.
 - [03-typescript.md](docs/03-typescript.md) — strictness, no `any`, naming, module boundaries.
 - [04-react-and-nextjs.md](docs/04-react-and-nextjs.md) — Server vs Client Components, data access,
   route handlers, folder structure.

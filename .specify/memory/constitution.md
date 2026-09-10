@@ -1,5 +1,13 @@
 <!--
 Sync Impact Report
+- Version change: 1.1.0 → 1.2.0
+- Modified sections:
+  - Incremental Decisions — "testing strategy" removed from the deferred list; it is now decided
+    in docs/architecture/002-testing-strategy.md. CI/CD remains deferred.
+- Other changes:
+  - Technology Stack gained the testing tools (Vitest, Playwright, Playwright MCP)
+
+Previous report (1.0.0 → 1.1.0)
 - Version change: 1.0.0 → 1.1.0
 - Modified principles:
   - I. Simplicity First (NON-NEGOTIABLE) — scope broadened from a single-purpose fitness tracker
@@ -82,16 +90,19 @@ without relying on comments or ad hoc styling/text conventions to compensate for
 Frontend and BFF: **React**, **Next.js**, **TypeScript**. Next.js provides both the client-side
 React application and the server-side BFF in one deployable unit. Initial persistence: **Google
 Sheets**, accessed exclusively server-side through the **Google Sheets API**. Authentication:
-**Google OAuth**, using the developer's own Google account/Google Cloud project. Any change to
-this stack (e.g. replacing Google Sheets with another datastore) is a deliberate architectural
-decision and MUST be reflected here and in `docs/architecture/`.
+**Google OAuth**, using the developer's own Google account/Google Cloud project. Testing:
+**Vitest** for unit tests and **Playwright** (mobile WebKit) for end-to-end tests, with a
+**Playwright MCP** browser for exploratory checks, as recorded in
+`docs/architecture/002-testing-strategy.md`. Any change to this stack (e.g. replacing Google
+Sheets with another datastore) is a deliberate architectural decision and MUST be reflected here
+and in `docs/architecture/`.
 
 ## Incremental Decisions
 
 The following remain intentionally undecided until actually needed, per Principle I: exact Google
 OAuth library/session-management implementation, exact hosting provider, Google Sheet schema, API
 endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
-support, error handling strategy, testing strategy, and CI/CD. Each MUST be decided incrementally,
+support, error handling strategy, and CI/CD. Each MUST be decided incrementally,
 at the point of implementation, rather than speculatively up front — and each cross-cutting
 decision should be captured in `docs/architecture/` once made, while feature-scoped decisions
 belong in that feature's Spec Kit documents under `specs/`.
@@ -111,4 +122,4 @@ equivalent) section rather than silently introduced. Use the guideline documents
 and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
 guidance that supplements, but does not override, this constitution.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-09
+**Version**: 1.2.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10

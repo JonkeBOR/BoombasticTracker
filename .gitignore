@@ -32,6 +32,12 @@ service-account*.json
 # Testing and coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright-mcp/
+.vitest/
 
 # Caches
 .eslintcache
@@ -57,3 +63,6 @@ Thumbs.db
 
 # Local HTTPS certificates
 certificates/
+
+# Local agent configuration
+.claude/settings.local.json

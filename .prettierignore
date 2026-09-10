@@ -6,3 +6,7 @@ coverage/
 package-lock.json
 .specify/
 .claude/
+test-results/
+playwright-report/
+blob-report/
+.playwright-mcp/
