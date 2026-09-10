@@ -1,6 +1,9 @@
 #!/usr/bin/env pwsh
 
-# Runs every quality check (format, lint, typecheck) and prints one compact block.
+# Runs every quality check (format, lint, typecheck, unit tests) and prints one compact block.
+#
+# End-to-end tests are deliberately excluded: they need a browser and an HTTP server. Run
+# ./scripts/e2e.ps1 for those.
 #
 # Usage: ./scripts/check.ps1 [-Fix] [-Json] [-MaxIssues <n>] [-Help]
 #
@@ -20,7 +23,8 @@ if ($Help) {
     Write-Output @'
 Usage: check.ps1 [OPTIONS]
 
-Runs format, lint and typecheck in one pass and reports each on its own line.
+Runs format, lint, typecheck and the unit tests in one pass, reporting each on its own line.
+End-to-end tests are not included - run e2e.ps1 for those.
 
 OPTIONS:
   -Fix               Rewrite formatting and apply auto-fixable lint fixes first
@@ -39,7 +43,8 @@ EXIT CODES:
 $checks = @(
     @{ Script = 'format.ps1'; FixSwitch = 'Write' },
     @{ Script = 'lint.ps1'; FixSwitch = 'Fix' },
-    @{ Script = 'typecheck.ps1'; FixSwitch = $null }
+    @{ Script = 'typecheck.ps1'; FixSwitch = $null },
+    @{ Script = 'test.ps1'; FixSwitch = $null }
 )
 
 $results = @()

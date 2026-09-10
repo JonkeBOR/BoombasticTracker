@@ -12,7 +12,17 @@ const configFiles = ['**/*.{js,mjs,cjs}'];
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', '.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts'],
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'out/**',
+      'build/**',
+      'coverage/**',
+      'test-results/**',
+      'playwright-report/**',
+      'blob-report/**',
+      'next-env.d.ts',
+    ],
   },
 
   { files: sourceFiles, extends: [js.configs.recommended] },
