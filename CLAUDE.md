@@ -41,6 +41,10 @@ Exit codes: `0` passed or nothing to check, `1` issues found, `2` the check coul
 
 **Finish every code change with `scripts/check.ps1` exiting 0.**
 
+Development is test-driven: a Vitest red-green-refactor inner loop, and one Playwright acceptance
+test per feature written first. See
+[003-development-workflow.md](docs/architecture/003-development-workflow.md).
+
 `next lint` no longer exists in Next 16; ESLint runs through `scripts/lint.ps1` or `npm run lint`.
 
 Requires Node.js >= 22.12 and PowerShell 7 (`pwsh`); run `npm install` first, and

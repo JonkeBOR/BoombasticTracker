@@ -1,6 +1,6 @@
 # 002 — Testing strategy
 
-**Status**: accepted
+**Status**: accepted; superseded in part by 003
 **Date**: 2026-09-10
 
 ## Context
@@ -23,6 +23,10 @@ putting `page.module.css` beside `page.tsx`.
 documents that Vitest cannot render `async` Server Components and that E2E is the supported answer
 — and `async` Server Components are exactly the shape the first feature takes. The suites are kept
 disjoint by construction: Vitest collects only `src/**/*.test.{ts,tsx}`, Playwright only `e2e/`.
+
+003 refines this split from a capability question into a loop question, and settles one case this
+record left open: route handlers are plain functions over Web `Request`/`Response`, so they
+unit-test in Vitest rather than over HTTP.
 
 ### One browser: mobile WebKit
 

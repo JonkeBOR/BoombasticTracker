@@ -8,17 +8,38 @@ disable-model-invocation: false
 
 # Testing in this repo
 
+Development is test-driven, in two loops - see `docs/architecture/003-development-workflow.md`.
+The **inner loop** is Vitest red-green-refactor, run constantly. The **outer loop** is one
+Playwright acceptance test per feature, written first, run at the start and end of the feature and
+not iterated in.
+
 ## Which tool
 
-| Situation                                                                      | Tool           |
-| ------------------------------------------------------------------------------ | -------------- |
-| Pure function, string module, sync Server Component, Client Component          | Vitest         |
-| `async` Server Component, route handler over HTTP, navigation, real layout     | Playwright     |
-| One-off "does this look right, what is on the page" during development         | Playwright MCP |
+| Situation                                                      | Tool               |
+| -------------------------------------------------------------- | ------------------ |
+| Domain logic, validation, data mapping, string modules         | Vitest (inner)     |
+| Route handler - import it, call it with `new Request(...)`     | Vitest (inner)     |
+| Sync Server Component, Client Component                        | Vitest (inner)     |
+| Feature acceptance test, written before the feature            | Playwright (outer) |
+| `async` Server Component, real cookies, redirects, navigation  | Playwright (outer) |
+| "What is on the page right now", does it look right on a phone | Playwright MCP     |
+
+Default to Vitest. Reach for Playwright only for what Vitest cannot see: `async` Server
+Components, real runtime behaviour, and the wiring between them.
 
 Vitest cannot render `async` Server Components. This is a documented Next.js limitation, not a
-configuration problem - see `node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`.
-Reach for Playwright instead of trying to make it work.
+configuration problem - see `node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`. It
+should rarely bite, because logic does not belong in the async shell: `await` the data and hand it
+to a sync component, which Vitest renders fine. **If a business rule can only be tested through
+Playwright, the rule is in the wrong place.**
+
+Route handlers are plain functions over Web `Request`/`Response`, so they unit-test in Vitest with
+no server. The exception is `next/headers`: `cookies()` is async and reads request scope, so
+calling it inside a handler fails under Vitest with `` `cookies` was called outside a request
+scope ``. Take the session as a parameter and keep the `next/headers` call in a thin adapter.
+
+Test-first covers logic and contracts. Styling and layout are exempt - check those with the MCP
+browser.
 
 The MCP browser is for exploring, not for asserting. When a manual MCP check becomes something you
 would repeat, promote it into `e2e/*.spec.ts`.
