@@ -21,13 +21,13 @@ error messages").
 { "error": { "code": "INVALID_MEASUREMENT", "message": "Weight must be between 20 and 400 kg." } }
 ```
 
-| Code | Status | Meaning |
-| ---- | ------ | ------- |
-| `UNAUTHENTICATED` | 401 | No session, or the session could not be decrypted. |
-| `FORBIDDEN` | 403 | Valid session, but the email is not the allowlisted owner. |
-| `INVALID_MEASUREMENT` | 400 | Body failed validation. `fields` carries per-field messages. |
-| `STORE_UNAVAILABLE` | 502 | Google Sheets was unreachable, rate-limited, or returned an error. Retryable. |
-| `STORE_MISCONFIGURED` | 500 | The spreadsheet or tab is missing, the service account key is bad, or the sheet is not shared with it. Not retryable; it needs configuration. |
+| Code                  | Status | Meaning                                                                                                                                       |
+| --------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UNAUTHENTICATED`     | 401    | No session, or the session could not be decrypted.                                                                                            |
+| `FORBIDDEN`           | 403    | Valid session, but the email is not the allowlisted owner.                                                                                    |
+| `INVALID_MEASUREMENT` | 400    | Body failed validation. `fields` carries per-field messages.                                                                                  |
+| `STORE_UNAVAILABLE`   | 502    | Google Sheets was unreachable, rate-limited, or returned an error. Retryable.                                                                 |
+| `STORE_MISCONFIGURED` | 500    | The spreadsheet or tab is missing, the service account key is bad, or the sheet is not shared with it. Not retryable; it needs configuration. |
 
 `STORE_UNAVAILABLE` and `STORE_MISCONFIGURED` are distinct because the spec's edge cases treat them
 differently: one asks the owner to retry, the other tells them something is set up wrong.
@@ -46,12 +46,12 @@ plain `UNAUTHENTICATED`.
 Begins the flow. Generates `state` and a PKCE `code_verifier`, stores both in short-lived `HttpOnly`
 cookies, and redirects to Google's consent screen.
 
-| | |
-| --- | --- |
-| Query | `next` (optional) — the path to return to after sign-in (FR-013). Rejected unless it is a relative path beginning `/`, so it cannot become an open redirect. |
-| Success | `302` to `accounts.google.com/o/oauth2/v2/auth` |
-| Scopes | `openid`, `email` — identity only |
-| Params | `response_type=code`, `code_challenge_method=S256` |
+|         |                                                                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Query   | `next` (optional) — the path to return to after sign-in (FR-013). Rejected unless it is a relative path beginning `/`, so it cannot become an open redirect. |
+| Success | `302` to `accounts.google.com/o/oauth2/v2/auth`                                                                                                              |
+| Scopes  | `openid`, `email` — identity only                                                                                                                            |
+| Params  | `response_type=code`, `code_challenge_method=S256`                                                                                                           |
 
 No Sheets scope is requested: the spreadsheet is reached with the application's own service account,
 not the owner's authorization (research R12). And `access_type=offline` / `prompt=consent` are
@@ -65,12 +65,12 @@ checks the allowlist, seals the session, clears the temporary cookies. The Googl
 exchange is used for nothing and is discarded with the rest of the response; only the verified email
 survives into the session.
 
-| Outcome | Response |
-| ------- | -------- |
-| Success | `302` to the stored `next` path, or `/`. `Set-Cookie: session=<JWE>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000` |
-| `state` missing or mismatched | `302` to `/sign-in?error=invalid_state` |
-| Google returned `error` (owner denied consent) | `302` to `/sign-in?error=denied` |
-| Email not on the allowlist | `302` to `/sign-in?error=forbidden`, no session cookie set (FR-011) |
+| Outcome                                        | Response                                                                                                                      |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Success                                        | `302` to the stored `next` path, or `/`. `Set-Cookie: session=<JWE>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000` |
+| `state` missing or mismatched                  | `302` to `/sign-in?error=invalid_state`                                                                                       |
+| Google returned `error` (owner denied consent) | `302` to `/sign-in?error=denied`                                                                                              |
+| Email not on the allowlist                     | `302` to `/sign-in?error=forbidden`, no session cookie set (FR-011)                                                           |
 
 Failures redirect rather than return JSON: this endpoint is reached by top-level navigation, so the
 owner must land on a page, not a JSON body.
@@ -92,8 +92,13 @@ data — the proxy redirect is not the check that matters (research R7).
 ```jsonc
 {
   "measurements": [
-    { "id": "0f8c…", "recordedOn": "2026-09-10", "kilograms": 82.4, "createdAt": "2026-09-10T06:12:03.000Z" }
-  ]
+    {
+      "id": "0f8c…",
+      "recordedOn": "2026-09-10",
+      "kilograms": 82.4,
+      "createdAt": "2026-09-10T06:12:03.000Z",
+    },
+  ],
 }
 ```
 
@@ -114,10 +119,10 @@ override exists so a missed weigh-in can be backfilled.
 
 `id` and `createdAt` are assigned server-side; a client-supplied value for either is ignored.
 
-| Outcome | Response |
-| ------- | -------- |
-| Created | `201` with the created measurement in `{ "measurement": … }` |
-| Validation failed | `400` `INVALID_MEASUREMENT`, with `fields` naming each problem. Nothing written (FR-033). |
+| Outcome            | Response                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Created            | `201` with the created measurement in `{ "measurement": … }`                                                     |
+| Validation failed  | `400` `INVALID_MEASUREMENT`, with `fields` naming each problem. Nothing written (FR-033).                        |
 | Sheets unreachable | `502` `STORE_UNAVAILABLE`. Nothing written, and no success is reported for a write that did not happen (FR-029). |
 
 ---

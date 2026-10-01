@@ -14,7 +14,7 @@ conventional answer, the documentation won and it is called out.
 `jose`, keyed by a 32-byte `SESSION_SECRET`. Store the sealed string in one cookie:
 `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Max-Age` 30 days.
 
-**Rationale**: Next's own authentication guide demonstrates a *signed* JWT (`SignJWT`/`jwtVerify`),
+**Rationale**: Next's own authentication guide demonstrates a _signed_ JWT (`SignJWT`/`jwtVerify`),
 whose payload is base64url — readable by anyone holding the cookie.
 
 Under the service account design (R12) the payload holds only the owner's email, so a signed cookie
@@ -30,11 +30,12 @@ Google, and `Strict` would withhold the cookie on that navigation. FR-004 permit
 one that works.
 
 **Alternatives considered**:
-- *Signed JWT (the Next docs example)* — rejected: readable payload, fails FR-009.
-- *`iron-session`* — a good library that encrypts by default and wraps this exact pattern in ~100 KB.
+
+- _Signed JWT (the Next docs example)_ — rejected: readable payload, fails FR-009.
+- _`iron-session`_ — a good library that encrypts by default and wraps this exact pattern in ~100 KB.
   Rejected narrowly: it is `jose` plus cookie ergonomics, and we need `jose` anyway for ID token
   verification. Worth revisiting if the cookie handling grows awkward.
-- *Server-side session store keyed by an opaque id* — the more secure classic design, rejected because
+- _Server-side session store keyed by an opaque id_ — the more secure classic design, rejected because
   it requires a database or KV store, which Principle IV and "minimal infrastructure" both refuse.
 
 ---
@@ -53,7 +54,7 @@ learning project most wants to see rather than import. Principle I's test — "d
 framework unless a concrete technical need justifies it" — is not met by a flow this small. The
 genuinely dangerous parts are delegated to `jose`, not written by hand.
 
-**Scopes: `openid` and `email` only.** This flow establishes *identity* and nothing else. It requests
+**Scopes: `openid` and `email` only.** This flow establishes _identity_ and nothing else. It requests
 no Sheets scope, because the spreadsheet is reached with the application's own credential (R12), not
 the owner's. Two consequences follow, and they are the reason the architecture is shaped this way:
 
@@ -65,8 +66,9 @@ the owner's. Two consequences follow, and they are the reason the architecture i
   unverified-app interstitial.
 
 **Alternatives considered**:
-- *Auth.js (NextAuth v5)* — rejected for size and opacity, per above.
-- *`google-auth-library` (602 KB)* — rejected: it earns its keep on token refresh and ID token
+
+- _Auth.js (NextAuth v5)_ — rejected for size and opacity, per above.
+- _`google-auth-library` (602 KB)_ — rejected: it earns its keep on token refresh and ID token
   verification, both of which `jose` plus one `fetch` already cover here.
 
 ---
@@ -85,9 +87,10 @@ handles key caching and rotation, and the alternative — trusting a decoded pay
 not forming. It also means the allowlist check reads from a verified claim.
 
 **Alternatives considered**:
-- *Call the `userinfo` endpoint with the access token* — one more network round trip per sign-in for
+
+- _Call the `userinfo` endpoint with the access token_ — one more network round trip per sign-in for
   the same information the ID token already carries.
-- *Decode without verifying* — permitted by Google here, but a worse default to learn.
+- _Decode without verifying_ — permitted by Google here, but a worse default to learn.
 
 ---
 
@@ -100,11 +103,11 @@ not forming. It also means the allowlist check reads from a verified claim.
 
 **Rationale**: The application needs exactly two operations. Measured against that:
 
-| Candidate | Unpacked size | Verdict |
-| --------- | ------------- | ------- |
-| `googleapis` | **213 MB** | Rejected outright; it is the entire Google API surface. |
-| `@googleapis/sheets` | 756 KB | Rejected: a generated client for two endpoints we can call in ten lines. |
-| `fetch` | 0 | Chosen. |
+| Candidate            | Unpacked size | Verdict                                                                  |
+| -------------------- | ------------- | ------------------------------------------------------------------------ |
+| `googleapis`         | **213 MB**    | Rejected outright; it is the entire Google API surface.                  |
+| `@googleapis/sheets` | 756 KB        | Rejected: a generated client for two endpoints we can call in ten lines. |
+| `fetch`              | 0             | Chosen.                                                                  |
 
 Keeping the call sites raw also keeps them inside the adapter, which is where provider knowledge is
 supposed to be confined anyway (FR-027).
@@ -122,7 +125,7 @@ nothing to refresh, nothing to store, and nothing to keep in sync with a cookie.
 assertion costs one signature and one HTTPS round trip, once an hour.
 
 This replaces a materially more complicated earlier design, and the reason it was complicated is worth
-recording. When the store was reached with the *owner's* OAuth tokens, those tokens had to live in the
+recording. When the store was reached with the _owner's_ OAuth tokens, those tokens had to live in the
 session cookie, which meant refreshing them meant **rewriting the cookie** — and `cookies().set()`
 throws in a Server Component. Since `/fitness-tracker` is a Server Component that reads data directly,
 some reads could never persist a refreshed token, forcing a scheme where refreshes happened in memory
@@ -132,9 +135,10 @@ None of that exists now. The framework constraint is still real; this design sim
 because the credential that reaches the store has nothing to do with the session cookie.
 
 **Alternatives considered**:
-- *Mint per request, no cache* — one extra signature and round trip on every data operation, for no
+
+- _Mint per request, no cache_ — one extra signature and round trip on every data operation, for no
   benefit. The cache is a module-level variable, not infrastructure.
-- *Cache the token in the session cookie* — reintroduces the cookie-write problem for no gain, and
+- _Cache the token in the session cookie_ — reintroduces the cookie-write problem for no gain, and
   would put a store credential in the browser, violating FR-008a.
 
 ---
@@ -167,7 +171,6 @@ refresh machinery described in R5.
 still needs it before verification, whatever the scopes.
 
 ---
-
 
 ---
 
@@ -259,6 +262,7 @@ Nothing in this plan constrains the choice — no provider-specific API is used,
 stays provider-neutral.
 
 ---
+
 ## R12 — Store access: a service account, via the JWT bearer assertion grant
 
 **Decision**: The application reaches the spreadsheet as itself, using a Google **service account**.
@@ -278,8 +282,8 @@ new assertion can always be signed.
 `jose` covers this with no new dependency: `importPKCS8` reads the PEM out of the service account key,
 and `SignJWT` produces the assertion.
 
-**Rationale**: This separates the two questions that were previously tangled — *who is using the app*
-and *what may the server touch*. Identity is the owner's, via authorization code (R2). Store access is
+**Rationale**: This separates the two questions that were previously tangled — _who is using the app_
+and _what may the server touch_. Identity is the owner's, via authorization code (R2). Store access is
 the application's, and works whether or not anyone is signed in. Concretely it removes: the 7-day
 refresh token expiry (R6), the token refresh and cookie-rewrite machinery (R5), the sensitive
 `spreadsheets` scope from the consent screen, and the unverified-app interstitial.
@@ -287,11 +291,12 @@ refresh token expiry (R6), the token refresh and cookie-rewrite machinery (R5), 
 **On the grant type**: this is RFC 7523's JWT bearer grant, which Google documents as the service
 account flow or two-legged OAuth. It occupies the same conceptual slot as `client_credentials` —
 machine-to-machine, no user, no consent — but is not literally that grant: the client proves itself by
-signing an assertion with a private key rather than presenting a shared secret. The *implicit* grant is
+signing an assertion with a private key rather than presenting a shared secret. The _implicit_ grant is
 unrelated and would be wrong here on every count: it is a front-channel browser flow for public
 clients, and OAuth 2.1 removes it.
 
 **Costs, stated plainly**:
+
 - A private key becomes a deployment secret. It arrives as `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, a
   multi-line PEM in an environment variable — the classic snag, since most platforms deliver it with
   literal `\n` sequences that must be turned back into newlines before `importPKCS8` will accept it.
@@ -304,10 +309,11 @@ clients, and OAuth 2.1 removes it.
   noticed.
 
 **Alternatives considered**:
-- *Owner's OAuth credentials reaching the sheet* — the original design; see R6 for why it was dropped.
-- *Domain-wide delegation (`sub` impersonation)* — needs a Workspace domain and an admin grant, and
+
+- _Owner's OAuth credentials reaching the sheet_ — the original design; see R6 for why it was dropped.
+- _Domain-wide delegation (`sub` impersonation)_ — needs a Workspace domain and an admin grant, and
   would exist only to make edits appear under the owner's name. Not worth a Workspace dependency.
-- *An API key* — cannot work; API keys authorize only public, unauthenticated reads, and this sheet is
+- _An API key_ — cannot work; API keys authorize only public, unauthenticated reads, and this sheet is
   private and written to.
 
 ---
@@ -336,10 +342,10 @@ than something only reproducible late at night. That test is listed in
 
 ## Dependency summary
 
-| Package | Size (unpacked) | Why it earns its place |
-| ------- | --------------- | ---------------------- |
-| `jose` | 210 KB | JWE session sealing (R1), Google ID token verification (R3), and RS256 signing of the service account assertion (R12). Encryption, JWT verification and JWS signing are not code to hand-roll. |
-| `server-only` | 611 B | Turns "a Client Component must never import the Sheets or session module" from a review rule into a build error. FR-006 and FR-007 are hard requirements; this is how they are enforced mechanically. |
+| Package       | Size (unpacked) | Why it earns its place                                                                                                                                                                                |
+| ------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jose`        | 210 KB          | JWE session sealing (R1), Google ID token verification (R3), and RS256 signing of the service account assertion (R12). Encryption, JWT verification and JWS signing are not code to hand-roll.        |
+| `server-only` | 611 B           | Turns "a Client Component must never import the Sheets or session module" from a review rule into a build error. FR-006 and FR-007 are hard requirements; this is how they are enforced mechanically. |
 
 Nothing else is added. `googleapis`, `@googleapis/sheets`, `google-auth-library`, `iron-session`,
 `next-auth`/Auth.js and `zod` were each considered and rejected above.

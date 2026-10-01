@@ -42,7 +42,7 @@ Two checklist items pass with a qualification worth recording rather than hiding
   they are fixed by [constitution.md](../../../.specify/memory/constitution.md) (Technology Stack)
   and were stated as hard requirements in the owner's input. They are quarantined in the
   **Pre-Decided Technical Constraints** section, and appear in requirements only where the constraint
-  *is* the requirement: FR-004 (cookie attributes), FR-006 to FR-009 (where Google tokens may and may
+  _is_ the requirement: FR-004 (cookie attributes), FR-006 to FR-009 (where Google tokens may and may
   not live), FR-025 (Google Sheet as the store), FR-043 (hosting capabilities). Every other
   requirement is written in behavioural terms — "the store", "an external data service", "the app's
   own origin" — so that replacing the storage provider would not invalidate them.
@@ -60,6 +60,6 @@ is a `/speckit-clarify` away and would affect User Story 3, FR-030 to FR-034, an
 
 ### Validation record
 
-| Iteration | Result |
-| --------- | ------ |
-| 1 | All items pass. Zero `[NEEDS CLARIFICATION]` markers; two qualified passes documented above. |
+| Iteration | Result                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------- |
+| 1         | All items pass. Zero `[NEEDS CLARIFICATION]` markers; two qualified passes documented above. |

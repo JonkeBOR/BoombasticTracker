@@ -10,10 +10,10 @@ setup summarised here; this file is the developer-facing checklist that says wha
 
 ## Prerequisites
 
-| | |
-| --- | --- |
-| Node.js | >= 22.12 |
-| PowerShell | 7 (`pwsh`) |
+|                |                                                   |
+| -------------- | ------------------------------------------------- |
+| Node.js        | >= 22.12                                          |
+| PowerShell     | 7 (`pwsh`)                                        |
 | Google account | The one that will own the app and the spreadsheet |
 
 ```pwsh
@@ -55,17 +55,17 @@ affect it.
 
 `.env.local`, which is git-ignored and must stay that way (FR-040):
 
-| Variable | Purpose |
-| -------- | ------- |
-| `GOOGLE_CLIENT_ID` | OAuth client id — sign-in only |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret — sign-in only |
-| `GOOGLE_OAUTH_REDIRECT_URI` | Must match the console entry exactly, including scheme and port |
-| `SESSION_SECRET` | 32 random bytes, base64. Generate with `openssl rand -base64 32` |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `client_email` from the service account JSON key |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | `private_key` from the same file — a multi-line PEM |
-| `GOOGLE_SHEET_ID` | From the sheet URL, between `/d/` and `/edit` |
-| `ALLOWED_GOOGLE_EMAIL` | The one account permitted to use the app (FR-011) |
-| `APP_TIME_ZONE` | IANA zone name, e.g. `Europe/Oslo`. Decides what "today" means for a measurement (FR-031a) |
+| Variable                             | Purpose                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `GOOGLE_CLIENT_ID`                   | OAuth client id — sign-in only                                                             |
+| `GOOGLE_CLIENT_SECRET`               | OAuth client secret — sign-in only                                                         |
+| `GOOGLE_OAUTH_REDIRECT_URI`          | Must match the console entry exactly, including scheme and port                            |
+| `SESSION_SECRET`                     | 32 random bytes, base64. Generate with `openssl rand -base64 32`                           |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`       | `client_email` from the service account JSON key                                           |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | `private_key` from the same file — a multi-line PEM                                        |
+| `GOOGLE_SHEET_ID`                    | From the sheet URL, between `/d/` and `/edit`                                              |
+| `ALLOWED_GOOGLE_EMAIL`               | The one account permitted to use the app (FR-011)                                          |
+| `APP_TIME_ZONE`                      | IANA zone name, e.g. `Europe/Oslo`. Decides what "today" means for a measurement (FR-031a) |
 
 The private key is the awkward one. It contains real newlines, which most hosting platforms cannot
 carry in an environment variable, so it is stored with literal `\n` sequences and converted back in

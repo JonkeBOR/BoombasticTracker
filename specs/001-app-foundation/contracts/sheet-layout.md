@@ -16,12 +16,12 @@ collection name. This feature needs exactly one tab.
 
 Row 1 is a header and is never read as data. Rows 2 onward are records.
 
-| Column | Header | Content | Example |
-| ------ | ------ | ------- | ------- |
-| A | `id` | UUID, server-assigned | `0f8c1b7e-…` |
-| B | `recordedOn` | ISO date, `YYYY-MM-DD` | `2026-09-10` |
-| C | `kilograms` | Decimal, `.` separator, written raw | `82.4` |
-| D | `createdAt` | ISO 8601 timestamp, UTC | `2026-09-10T06:12:03.000Z` |
+| Column | Header       | Content                             | Example                    |
+| ------ | ------------ | ----------------------------------- | -------------------------- |
+| A      | `id`         | UUID, server-assigned               | `0f8c1b7e-…`               |
+| B      | `recordedOn` | ISO date, `YYYY-MM-DD`              | `2026-09-10`               |
+| C      | `kilograms`  | Decimal, `.` separator, written raw | `82.4`                     |
+| D      | `createdAt`  | ISO 8601 timestamp, UTC             | `2026-09-10T06:12:03.000Z` |
 
 Written with `valueInputOption=RAW` so Sheets does not reinterpret the date as a serial number or the
 decimal by locale.
@@ -41,12 +41,12 @@ readability does not break the app — but reordering columns does.
 
 ## What breaks it
 
-| Condition | App behaviour |
-| --------- | ------------- |
-| Tab renamed or deleted | `STORE_MISCONFIGURED` → 500, message says the store needs configuration |
-| Spreadsheet trashed, or the id wrong | `STORE_MISCONFIGURED` |
-| A row hand-edited into an unparseable state | That row is skipped; the rest of the history renders |
-| Columns reordered | Rows fail to parse and are skipped — silently wrong, and the one hazard this layout does not defend against |
+| Condition                                   | App behaviour                                                                                               |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Tab renamed or deleted                      | `STORE_MISCONFIGURED` → 500, message says the store needs configuration                                     |
+| Spreadsheet trashed, or the id wrong        | `STORE_MISCONFIGURED`                                                                                       |
+| A row hand-edited into an unparseable state | That row is skipped; the rest of the history renders                                                        |
+| Columns reordered                           | Rows fail to parse and are skipped — silently wrong, and the one hazard this layout does not defend against |
 
 The last row is worth stating plainly rather than hiding: reading by position is the simple choice, and
 its cost is that column order is part of the contract.

@@ -48,10 +48,10 @@ Provider-specific failures are translated at the adapter boundary, so no Google 
 message or spreadsheet identifier travels upward. Route handlers map these to `502` and `500` per
 [http-api.md](http-api.md).
 
-| Google response | Becomes |
-| --------------- | ------- |
-| `404`, or the named tab is absent | `StoreMisconfiguredError` |
-| `429`, `5xx`, network failure, timeout | `StoreUnavailableError` |
+| Google response                                                           | Becomes                   |
+| ------------------------------------------------------------------------- | ------------------------- |
+| `404`, or the named tab is absent                                         | `StoreMisconfiguredError` |
+| `429`, `5xx`, network failure, timeout                                    | `StoreUnavailableError`   |
 | `401`/`403` — bad service account key, or the sheet is not shared with it | `StoreMisconfiguredError` |
 
 ---

@@ -24,7 +24,7 @@
   From the server, using a timezone configured once. That day is the default; the owner may override
   it with an earlier date to backfill, and future dates are rejected.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Sign in once and stay signed in (Priority: P1)
 
@@ -184,7 +184,7 @@ every required value and console step accounted for.
 - A feature address is requested that does not exist; the owner must get a clear not-found page
   inside the app rather than a framework error.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -335,7 +335,7 @@ owner's explicit instruction, and are recorded here because requirements above d
 - The sheet schema and folder conventions remain implementation decisions, constrained by the
   requirements above but not fixed by them.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Owner**: The single permitted human user, identified by one Google account identity. The app has
   no concept of multiple users, roles, or sharing.
@@ -356,7 +356,7 @@ owner's explicit instruction, and are recorded here because requirements above d
   each with sets of repetitions and weights. Named here as the direction the data layout must not
   preclude; specifying and building it is deliberately deferred to a later feature.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -403,7 +403,7 @@ owner's explicit instruction, and are recorded here because requirements above d
   identifier through configuration; the app does not create or provision it, though it must report
   clearly when it is missing or misconfigured.
 - **Sign-in identity and store access use separate Google credentials.** Google OAuth establishes
-  *who* the owner is and nothing more; the credential that reaches the spreadsheet is a separate
+  _who_ the owner is and nothing more; the credential that reaches the spreadsheet is a separate
   service account belonging to the application, with the sheet shared to it. An earlier draft assumed
   the owner's own sign-in credentials would reach the sheet; that was reversed once it emerged that
   the route forces a weekly re-authentication or a scope verification the app does not need.

@@ -12,8 +12,8 @@ lives in [contracts/sheet-layout.md](contracts/sheet-layout.md); this file is ab
 The single permitted human. Not persisted — the app has no user table and never will while it has one
 user. Identity is a verified `email` claim compared against configuration.
 
-| Field | Type | Rules |
-| ----- | ---- | ----- |
+| Field   | Type     | Rules                                                                                                                                                     |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `email` | `string` | From the verified Google ID token. Must equal `ALLOWED_GOOGLE_EMAIL`, compared case-insensitively after trimming, or access is refused with 403 (FR-011). |
 
 Derived, never stored. There is no `User` record, no roles, no profile.
@@ -24,10 +24,10 @@ Derived, never stored. There is no `User` record, no roles, no profile.
 
 What the encrypted cookie contains. Two fields, and **no Google credential of any kind**.
 
-| Field | Type | Rules |
-| ----- | ---- | ----- |
-| `email` | `string` | The verified owner email, from the Google ID token. Re-checked against the allowlist on every request, so revoking access is a configuration change rather than a session-invalidation problem. |
-| `issuedAt` | `number` | Epoch milliseconds. Not used for expiry — the cookie's own `Max-Age` does that — but it makes a session's age visible when debugging. |
+| Field      | Type     | Rules                                                                                                                                                                                           |
+| ---------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `email`    | `string` | The verified owner email, from the Google ID token. Re-checked against the allowlist on every request, so revoking access is a configuration change rather than a session-invalidation problem. |
+| `issuedAt` | `number` | Epoch milliseconds. Not used for expiry — the cookie's own `Max-Age` does that — but it makes a session's age visible when debugging.                                                           |
 
 This is the shape that makes FR-006 through FR-009 nearly self-evident rather than carefully argued.
 Google's tokens are read during the OAuth callback, used to verify identity, and discarded before the
@@ -56,7 +56,7 @@ secret, but the rule is kept absolute so it needs no case-by-case judgement. The
                     └──────────────┘    and nothing needs renewing)
 ```
 
-Store-access failure is deliberately *not* a session state. If the service account cannot reach the
+Store-access failure is deliberately _not_ a session state. If the service account cannot reach the
 sheet, the owner stays signed in and sees a store error; signing in again would not help, so the app
 does not pretend otherwise by bouncing them to `/sign-in`.
 
@@ -66,12 +66,12 @@ does not pretend otherwise by bouncing them to `/sign-in`.
 
 A landing-page entry. Presentation data, not a plugin descriptor (research R10).
 
-| Field | Type | Rules |
-| ----- | ---- | ----- |
-| `id` | `string` | Stable, kebab-case. |
-| `name` | `string` | From `src/lib/strings/`, never a literal in markup (Principle V). |
-| `description` | `string` | Same. One short line for the card. |
-| `href` | `string` | Route segment beneath the app root, e.g. `/fitness-tracker`. |
+| Field         | Type     | Rules                                                             |
+| ------------- | -------- | ----------------------------------------------------------------- |
+| `id`          | `string` | Stable, kebab-case.                                               |
+| `name`        | `string` | From `src/lib/strings/`, never a literal in markup (Principle V). |
+| `description` | `string` | Same. One short line for the card.                                |
+| `href`        | `string` | Route segment beneath the app root, e.g. `/fitness-tracker`.      |
 
 Today the registry holds exactly one entry (FR-016). It is an ordered array; ordering is the display
 order.
@@ -83,12 +83,12 @@ order.
 The only persisted record in this feature. Deliberately one record type — see the spec's Assumptions
 for why the rest of the fitness model is deferred.
 
-| Field | Type | Rules |
-| ----- | ---- | ----- |
-| `id` | `string` | UUID generated server-side at write time. Not used for lookup yet; it exists so a later edit or delete has something to address, and so two near-simultaneous writes from two devices stay distinguishable (spec edge case). |
+| Field        | Type     | Rules                                                                                                                                                                                                                                                                                                                               |
+| ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | `string` | UUID generated server-side at write time. Not used for lookup yet; it exists so a later edit or delete has something to address, and so two near-simultaneous writes from two devices stay distinguishable (spec edge case).                                                                                                        |
 | `recordedOn` | `string` | ISO 8601 date, `YYYY-MM-DD`. Date, not timestamp — bodyweight is a daily measurement. Defaults to the current day in the configured timezone (`APP_TIME_ZONE`), computed server-side; the owner may override it with an earlier date to backfill. A date after that day is rejected. The browser's clock is never trusted for this. |
-| `kilograms` | `number` | Finite, `> 20` and `< 400`, at most one decimal place. Kilograms is fixed app-wide; no unit is stored per record. The bounds reject typos and unit confusion (a pounds figure entered as kilograms lands outside them) without pretending to be a medical range. |
-| `createdAt` | `string` | ISO 8601 timestamp, server-assigned. Distinguishes when the row was written from the day it describes, which is what lets a backfilled entry sort sensibly. |
+| `kilograms`  | `number` | Finite, `> 20` and `< 400`, at most one decimal place. Kilograms is fixed app-wide; no unit is stored per record. The bounds reject typos and unit confusion (a pounds figure entered as kilograms lands outside them) without pretending to be a medical range.                                                                    |
+| `createdAt`  | `string` | ISO 8601 timestamp, server-assigned. Distinguishes when the row was written from the day it describes, which is what lets a backfilled entry sort sensibly.                                                                                                                                                                         |
 
 **Validation** (FR-033) happens in one exported function in
 `src/features/fitness-tracker/bodyweight.ts`, called by the route handler before anything reaches the
@@ -128,4 +128,4 @@ is involved, which is the whole point of the requirement.
 - **No user record, no session table, no audit log.** One user, stateless sessions, no compliance
   requirement.
 - **No aggregation or trend types.** FR-030 only requires that entries carry a date so aggregation is
-  *possible* later. Computing it is not in this feature.
+  _possible_ later. Computing it is not in this feature.
