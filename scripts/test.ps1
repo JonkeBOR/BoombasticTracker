@@ -43,7 +43,7 @@ if ($toolchainError) {
     exit $script:ExitError
 }
 
-$reportPath = Join-Path ([System.IO.Path]::GetTempPath()) ('boombastic-vitest-{0}.json' -f [guid]::NewGuid().ToString('n'))
+$reportPath = Join-Path ([System.IO.Path]::GetTempPath()) ('onestopshop-vitest-{0}.json' -f [guid]::NewGuid().ToString('n'))
 
 try {
     $toolArgs = @('run', '--passWithNoTests', '--reporter=json', "--outputFile=$reportPath")

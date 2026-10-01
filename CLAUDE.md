@@ -4,15 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-BoombasticTracker is a personal **Next.js / React / TypeScript** web app and PWA, installed on the
+OneStopShop is a personal **Next.js / React / TypeScript** web app and PWA, installed on the
 developer's iPhone Home Screen. Fitness tracking — strength training and bodyweight metrics, and
 trends derived from historical data — is its first feature, not the whole product. Keep routes,
 folders and shared code feature-agnostic unless something genuinely belongs to one feature.
 
-- Persistence is a **Google Sheet** via the Google Sheets API, accessed **only** server-side.
-- Next.js also acts as the **BFF**: the browser calls `/api/*`, never Google.
-- Auth is **Google OAuth**, exchanged for a separate long-lived application session cookie.
-- Hosting must stay within a genuinely **free tier**.
+- Hosting is a single **Cloudflare Worker** on the free plan, built with OpenNext.
+- Persistence is **Cloudflare D1** (SQLite), reached **only** through the Worker's `DB` binding;
+  locally it is the SQLite file Wrangler keeps under `.wrangler/state/`.
+- Next.js also acts as the **BFF**: the browser calls the app's pages and `/api/*`, never Google
+  or the database.
+- Auth is **Google OAuth for identity only**, exchanged for the app's own signed 90-day session
+  cookie. No Google token is kept anywhere.
 
 The binding principles are in [constitution.md](.specify/memory/constitution.md) — Simplicity First
 is non-negotiable. Cross-cutting architecture decisions are recorded in
@@ -25,12 +28,20 @@ The application foundation exists: Next.js 16 App Router under `src/`, a single 
 code that uses them, user-facing text in `src/lib/strings/`, and a typed `src/app/manifest.ts` with
 icons and iOS metadata so the app installs to the Home Screen and launches in standalone mode.
 
-Testing exists: Vitest for unit tests colocated as `src/**/*.test.tsx`, Playwright for end-to-end
-tests in `e2e/`, and a Playwright MCP browser configured in `.mcp.json`.
+Testing exists: Vitest for unit tests colocated as `src/**/*.test.ts(x)` (a `node` project for
+`src/lib/` and route handlers, a `jsdom` project for components), Playwright for end-to-end tests in
+`e2e/` that sign in by minting a session cookie, and a Playwright MCP browser configured in `.mcp.json`.
 
-Not built yet: Google OAuth, the application session cookie, `src/lib/server/`, Google Sheets
-access, any `/api/*` route handler, `src/components/`, `src/features/`, CI, and a chosen hosting
-provider. Those directories are created when they have a real occupant, not before.
+Sign-in exists: `/sign-in`, the `/api/auth/*` route handlers, and `src/lib/server/` (config,
+session cookie, Google sign-in). Every protected page calls `requireSession(path)`; there is no
+Proxy, which OpenNext cannot run. The landing page lists features from `src/lib/features.ts`, and
+the fitness tracker at `/fitness-tracker` is a placeholder. `wrangler.jsonc` configures the Worker
+and the D1 binding, and `migrations/` holds a baseline that creates no tables. See
+[004-hosting-and-persistence.md](docs/architecture/004-hosting-and-persistence.md).
+
+Not built yet: any fitness data or schema, Drizzle ORM (deferred until the first table),
+`src/components/`, `src/features/`, and CI. Those are created when they have a real occupant, not
+before.
 
 ## Commands
 

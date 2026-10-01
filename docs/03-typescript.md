@@ -9,7 +9,7 @@ indexing an array yields `T | undefined` — handle the `undefined` rather than 
 ## Never use `any`
 
 `any` is banned by `@typescript-eslint/no-explicit-any`. When a type is genuinely unknown at a
-boundary — a fetch response, a Google Sheets row, JSON from a request body — use `unknown` and
+boundary — a fetch response, a decoded ID token, a database row, JSON from a request body — use `unknown` and
 narrow it before use. Data crossing an external boundary is validated, not asserted.
 
 ## Avoid escape hatches
@@ -40,10 +40,10 @@ pages, layouts and route segment files.
 
 ## Module boundaries
 
-Import application code through the `@/*` alias (`@/lib/sheets`) rather than long relative chains.
+Import application code through the `@/*` alias (`@/lib/server/config`) rather than long relative chains.
 Relative imports are for siblings within the same feature folder.
 
-Server-only modules — anything touching Google credentials, tokens or the Sheets API — must never
+Server-only modules — anything touching configuration, secrets, the session or the database — must never
 be imported from a Client Component. Keep them under a server folder and mark them with
 `import 'server-only'` so the mistake fails at build time instead of leaking secrets to the browser.
 

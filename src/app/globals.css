@@ -7,6 +7,8 @@
   --color-text-muted: #5a6272;
   --color-accent: #2f6df6;
   --color-border: #e3e6ec;
+  --color-on-accent: #ffffff;
+  --color-danger: #b42318;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -16,8 +18,11 @@
 
   --radius-md: 0.75rem;
 
+  --tap-target-min: 2.75rem;
+
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
   --font-size-xl: 1.75rem;
 
   --font-family-base: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -36,6 +41,8 @@
     --color-text-muted: #99a1b3;
     --color-accent: #6f9bff;
     --color-border: #2a2f3a;
+    --color-on-accent: #0b1020;
+    --color-danger: #ff8f84;
   }
 }
 

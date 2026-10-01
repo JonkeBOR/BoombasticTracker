@@ -75,14 +75,14 @@ and forcing the attempt produces assertions about class names and DOM structure 
 every visual change while proving nothing. Naming the exemption is what keeps the rest of the rule
 credible — an exemption that is written down is not a lapse.
 
-### Google Sheets and OAuth
+### The database and OAuth
 
 Test-driving network code usually motivates an abstraction to mock at. The constitution defers
 "data/repository abstraction" explicitly, and that deferral wins: no repository layer is
 introduced to make mocking convenient.
 
-Instead the pure parts carry the tests — sheet row to domain type and back, validation, the
-derived trends, response parsing — while the call that actually reaches Google stays thin enough
+Instead the pure parts carry the tests — database row to domain type and back, validation, the
+derived trends, response parsing — while the calls that actually reach the database or Google stay thin enough
 that a single end-to-end path covers it. If that thin call ever grows logic worth asserting, that
 is the concrete need which justifies revisiting this, and not before.
 

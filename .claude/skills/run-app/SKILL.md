@@ -1,12 +1,12 @@
 ---
 name: 'run-app'
-description: 'Run BoombasticTracker locally: start the dev server, build, serve the production build, or expose the dev server on the LAN so the app can be opened in iPhone Safari. Use when asked to run, start, launch, build or preview the app, or to confirm a change in a real browser.'
+description: 'Run OneStopShop locally: start the dev server, build, serve the production build, or expose the dev server on the LAN so the app can be opened in iPhone Safari. Use when asked to run, start, launch, build or preview the app, or to confirm a change in a real browser.'
 argument-hint: 'Optional: dev | lan | build | start'
 user-invocable: true
 disable-model-invocation: false
 ---
 
-# Running BoombasticTracker
+# Running OneStopShop
 
 The app runs through npm. The PowerShell scripts in `scripts/` are the quality gate, not a
 launcher - they never build or serve the app.

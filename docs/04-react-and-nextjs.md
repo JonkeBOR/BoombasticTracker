@@ -21,24 +21,33 @@ Component that fetches data and renders small interactive leaves.
 
 ## Data access
 
-The client never talks to Google Sheets. It calls application endpoints — `GET /api/workouts`,
-`POST /api/bodyweight` — and reasons about fitness data, never about spreadsheet ranges or the
-Sheets API shape.
+The client never talks to the database. It calls application endpoints — `GET /api/workouts`,
+`POST /api/bodyweight` — and reasons about fitness data, never about tables, SQL or the D1 binding.
 
 - Server Components read data by calling the server-side data module directly. Do not `fetch` the
   app's own route handlers from a Server Component.
 - Client Components fetch through `/api/*` route handlers.
-- Sheets access lives in one server-only module. Route handlers and Server Components call that
-  module; nothing else knows the storage provider.
+- Database access lives in one server-only module. Route handlers and Server Components call that
+  module; nothing else knows the storage provider or touches the `DB` binding.
 
 ## Route handlers
 
 A route handler validates its input, calls the data module, and maps the result to a response. It
-holds no business logic and no Sheets-specific code.
+holds no business logic and no database-specific code.
 
 Every handler that touches fitness data first resolves the application session and rejects an
-unauthenticated request with 401. The Google access token stays server-side; the browser only ever
+unauthenticated request with 401. Google tokens are discarded after sign-in; the browser only ever
 holds the application session cookie.
+
+## Protecting pages
+
+Every page that needs the owner starts with `await requireSession(path)` from
+`@/lib/server/session-cookie`, which redirects to `/sign-in` without a valid session. Auth checks
+never go in Proxy, which OpenNext cannot run on Workers, and never only in a layout, which does not
+re-render on client navigation. See `docs/architecture/004-hosting-and-persistence.md`.
+
+Keep the async page thin: await the session or data, then render a synchronous presentational
+component that Vitest can render directly.
 
 Return `Response.json(...)` with an explicit status. Errors return a stable shape and never leak a
 provider message, stack trace or token to the client.
@@ -50,7 +59,7 @@ provider message, stack trace or token to the client.
       components/     shared presentational components
       features/       feature folders, each owning its components and logic
       lib/            shared non-UI code
-      lib/server/     server-only modules (sheets, session, google auth)
+      lib/server/     server-only modules (config, session cookie, google sign-in, database)
       lib/strings/    user-facing text constants
 
 Code used by one feature lives in that feature's folder until a second consumer appears.

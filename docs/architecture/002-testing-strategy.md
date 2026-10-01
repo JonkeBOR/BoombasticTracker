@@ -6,7 +6,7 @@
 ## Context
 
 The application foundation exists but no feature does. The next feature is Google OAuth plus
-Google Sheets access, which lands as `async` Server Components and `/api/*` route handlers.
+database access (Google Sheets at the time of writing, since replaced by D1 in 004), which lands as `async` Server Components and `/api/*` route handlers.
 
 Principle I defers "testing strategy" until it is actually needed. This record decides it now and
 says plainly why that departure is being made.

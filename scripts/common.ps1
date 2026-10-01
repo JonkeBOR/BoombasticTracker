@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 
-# Shared helpers for the BoombasticTracker quality scripts.
+# Shared helpers for the OneStopShop quality scripts.
 #
 # Exit code contract used by every script that dot-sources this file:
 #   0  the check passed (or was skipped because there is nothing to check yet)
