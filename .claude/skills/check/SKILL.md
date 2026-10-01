@@ -1,6 +1,6 @@
 ---
 name: 'check'
-description: 'Run BoombasticTracker quality gate - Prettier, ESLint, tsc and Vitest - through the scripts in scripts/, and interpret their switches, output and exit codes. Use before finishing any code change, or when asked to lint, format, typecheck or run the checks.'
+description: 'Run OneStopShop quality gate - Prettier, ESLint, tsc and Vitest - through the scripts in scripts/, and interpret their switches, output and exit codes. Use before finishing any code change, or when asked to lint, format, typecheck or run the checks.'
 argument-hint: 'Optional: fix'
 user-invocable: true
 disable-model-invocation: false

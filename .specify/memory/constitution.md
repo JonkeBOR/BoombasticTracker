@@ -1,64 +1,35 @@
-<!--
-Sync Impact Report
-- Version change: 1.1.0 → 1.2.0
-- Modified sections:
-  - Incremental Decisions — "testing strategy" removed from the deferred list; it is now decided
-    in docs/architecture/002-testing-strategy.md. CI/CD remains deferred.
-- Other changes:
-  - Technology Stack gained the testing tools (Vitest, Playwright, Playwright MCP)
-
-Previous report (1.0.0 → 1.1.0)
-- Version change: 1.0.0 → 1.1.0
-- Modified principles:
-  - I. Simplicity First (NON-NEGOTIABLE) — scope broadened from a single-purpose fitness tracker
-    to a personal multi-feature application; principle itself unchanged
-  - II. Server-Mediated Data Access — endpoint examples marked illustrative rather than definitive
-- Added sections: none
-- Removed sections: none
-- Other changes:
-  - Product framing updated throughout: BoombasticTracker is a personal web app/PWA whose first
-    feature is fitness tracking, not a fitness tracker as such
-  - All references to `Specs/FitnessTracker/Architecture` repointed to `docs/architecture/`;
-    the Specs directory has been removed so Spec Kit starts from a clean slate
-- Templates requiring updates:
-  - .specify/templates/plan-template.md — ⚠ pending manual review against new principles
-  - .specify/templates/spec-template.md — ⚠ pending manual review against new principles
-  - .specify/templates/tasks-template.md — ⚠ pending manual review against new principles
-  (Dependent templates are read at runtime and are out of scope for this command; flagged for
-  the next /speckit-plan or /speckit-tasks run to confirm alignment.)
-- Follow-up TODOs: none
--->
-
-# BoombasticTracker Constitution
+# OneStopShop Constitution
 
 ## Core Principles
 
 ### I. Simplicity First (NON-NEGOTIABLE)
-BoombasticTracker is a personal, low-traffic application and a learning project, not an
+OneStopShop is a personal, low-traffic application and a learning project, not an
 enterprise system. Every architecture, tooling, or infrastructure decision MUST prefer
 **simple + understandable + secure enough + easy to deploy** over enterprise-style patterns.
 Do not introduce a service, abstraction layer, framework, or infrastructure component unless a
-concrete technical need justifies it. Decisions not yet required (e.g. schema design, testing
-strategy, CI/CD) are deferred rather than solved speculatively.
+concrete technical need justifies it. Decisions not yet required (e.g. schema design, CI/CD) are deferred rather than solved speculatively.
 
 **Rationale**: The project exists partly to give the developer hands-on React/Next.js experience
 without the overhead of production-grade infrastructure a personal single-user app does not need.
 
 ### II. Server-Mediated Data Access
-The React client (browser/PWA) MUST NOT communicate directly with Google Sheets or any future
+The React client (browser/PWA) MUST NOT communicate directly with the database or any other
 persistence backend. All data access goes through the Next.js server acting as a
 Backend-for-Frontend (BFF), exposed to the client as application-specific endpoints rather than
 raw storage-provider calls. The client reasons about application data, never about the shape of a
 storage provider's API.
 
-**Rationale**: Keeps storage credentials and provider-specific logic server-side, and allows the
-persistence layer (Google Sheets today) to change later without breaking the client contract.
+**Rationale**: Keeps storage access and provider-specific logic server-side, and allows the
+persistence layer (D1/SQLite today) to change later without breaking the client contract.
 
 ### III. Session/Identity Separation
 Google OAuth (identity and authorization) and the application's own session (a secure, persistent
 HTTP cookie managed by the Next.js server) are distinct concerns and MUST be implemented as such.
-The Google access token MUST NOT be stored in `localStorage` or `sessionStorage`; the browser
-holds only the application session cookie. Once a session is established, the app MUST keep
+Google OAuth is used for identity only and MUST request no scope beyond `openid`, `email` and
+`profile`. Google tokens and credentials MUST stay server-side: never in `localStorage`,
+`sessionStorage`, IndexedDB or any other client-accessible storage, and never in page props or
+response bodies. The browser holds only the application session cookie, set `HttpOnly`, `Secure`
+and `SameSite=Lax` or `Strict`. Once a session is established, the app MUST keep
 working across lock/unlock, app switching, PWA close/reopen, and page reload without forcing a
 new interactive Google login, re-authenticating via Google OAuth only when the session actually
 expires.
@@ -70,8 +41,9 @@ seamless "open app → already authenticated" experience appropriate for a Home 
 Hosting and infrastructure choices MUST fit within a genuinely free service tier unless a concrete
 technical reason requires otherwise. The app does not need high availability, autoscaling,
 enterprise infrastructure, paid databases, or dedicated servers, and MUST NOT take on such
-dependencies by default. Any hosting platform used MUST still support HTTPS, environment
-variables/secrets, persistent HTTP cookies, and outbound HTTPS requests to Google's APIs.
+dependencies by default. The chosen platform, Cloudflare Workers with D1, MUST be used within its free
+tier; paid add-ons require a concrete need recorded in `docs/architecture/`. The app deploys as a
+single Worker serving both pages and server — no separate frontend and backend hosting.
 
 **Rationale**: This is a personal, low-traffic application; ongoing cost and operational overhead
 must stay proportionate to that reality.
@@ -88,28 +60,44 @@ without relying on comments or ad hoc styling/text conventions to compensate for
 ## Technology Stack
 
 Frontend and BFF: **React**, **Next.js**, **TypeScript**. Next.js provides both the client-side
-React application and the server-side BFF in one deployable unit. Initial persistence: **Google
-Sheets**, accessed exclusively server-side through the **Google Sheets API**. Authentication:
-**Google OAuth**, using the developer's own Google account/Google Cloud project. Testing:
-**Vitest** for unit tests and **Playwright** (mobile WebKit) for end-to-end tests, with a
+React application and the server-side BFF in one deployable unit. Hosting: **Cloudflare Workers**,
+built with the OpenNext adapter (`@opennextjs/cloudflare`) and running with the `nodejs_compat`
+flag; the Workers runtime is not Node.js, so every server-side dependency MUST be verified to run
+there. Persistence: a **SQLite-family database** — **Cloudflare D1** in the cloud, reachable only
+through the Worker's binding, and a **local SQLite file** in development — with schema and
+migrations single-sourced in **Drizzle ORM** and checked into the repository. Authentication:
+**Google OAuth** for identity only, using the developer's own Google account/Google Cloud project.
+Testing: **Vitest** for unit tests and **Playwright** (mobile WebKit) for end-to-end tests, with a
 **Playwright MCP** browser for exploratory checks, as recorded in
-`docs/architecture/002-testing-strategy.md`. Any change to this stack (e.g. replacing Google
-Sheets with another datastore) is a deliberate architectural decision and MUST be reflected here
-and in `docs/architecture/`.
+`docs/architecture/002-testing-strategy.md`. Google Sheets and the Google Sheets API are not part
+of the stack. Any change to this stack is a deliberate architectural decision and MUST be reflected
+here and in `docs/architecture/`.
 
 ## Incremental Decisions
 
 The following remain intentionally undecided until actually needed, per Principle I: exact Google
-OAuth library/session-management implementation, exact hosting provider, Google Sheet schema, API
-endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
+OAuth library/session-management implementation, database schema beyond what a feature needs,
+API endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
 support, error handling strategy, and CI/CD. Each MUST be decided incrementally,
 at the point of implementation, rather than speculatively up front — and each cross-cutting
 decision should be captured in `docs/architecture/` once made, while feature-scoped decisions
 belong in that feature's Spec Kit documents under `specs/`.
 
+## Development Workflow
+
+Development is test-driven, as recorded in `docs/architecture/003-development-workflow.md`. Each
+feature MUST begin with one Playwright acceptance test in `e2e/`, written from the phone's point
+of view and confirmed failing for the intended reason before implementation starts; the feature is
+done when that test passes unmodified. Within a feature, domain logic, route handlers, data
+mapping, validation and synchronous component behaviour MUST be driven by a Vitest
+red-green-refactor loop. Styling and layout are exempt and are checked in a real browser instead.
+Business logic MUST live where Vitest can reach it — if a rule can only be tested through
+Playwright, it is in the wrong place. Every code change MUST finish with
+`scripts/check.ps1` exiting 0.
+
 ## Governance
 
-This constitution supersedes other informal practices for BoombasticTracker. Amendments are made
+This constitution supersedes other informal practices for OneStopShop. Amendments are made
 by editing `.specify/memory/constitution.md` directly, updating the Sync Impact Report at the top
 of the file, and bumping the version per semantic versioning: MAJOR for backward-incompatible
 principle removals/redefinitions, MINOR for new principles or materially expanded guidance, PATCH
@@ -122,4 +110,4 @@ equivalent) section rather than silently introduced. Use the guideline documents
 and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
 guidance that supplements, but does not override, this constitution.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10
+**Version**: 2.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-01

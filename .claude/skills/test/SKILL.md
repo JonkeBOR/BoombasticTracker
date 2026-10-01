@@ -1,6 +1,6 @@
 ---
 name: 'test'
-description: 'Choose and run the right kind of test in BoombasticTracker - Vitest unit tests, Playwright end-to-end tests, or the Playwright MCP browser for exploratory checks. Use when writing tests, running tests, or verifying behaviour in a real browser.'
+description: 'Choose and run the right kind of test in OneStopShop - Vitest unit tests, Playwright end-to-end tests, or the Playwright MCP browser for exploratory checks. Use when writing tests, running tests, or verifying behaviour in a real browser.'
 argument-hint: 'Optional: unit | e2e | browse'
 user-invocable: true
 disable-model-invocation: false

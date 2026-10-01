@@ -33,12 +33,11 @@ signal — at which point the caching strategy is a decision in its own right.
 `viewport-fit=cover` is set so `env(safe-area-inset-*)` resolves to real values; the insets are
 exposed as CSS custom properties in `globals.css` so component stylesheets never write `env()`.
 
-## Hosting still undecided
+## Hosting decided in 004
 
-Deferred per the constitution's Free-Tier Hosting Constraint and Incremental Decisions. `next.config.ts`
-is deliberately provider-neutral. Whatever is chosen must support HTTPS, environment secrets,
-persistent HTTP cookies and outbound HTTPS to Google's APIs. Verifying standalone launch on a real
-device needs an HTTPS origin, so this decision is likely to be forced by the first device test.
+This was deferred at bootstrap and is now decided: a single Cloudflare Worker built with OpenNext,
+with Cloudflare D1 for persistence. See [004-hosting-and-persistence.md](004-hosting-and-persistence.md).
+`next.config.ts` now calls `initOpenNextCloudflareForDev()` so `next dev` sees the Worker's bindings.
 
 ## TypeScript configuration is pinned to what Next requires
 

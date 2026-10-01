@@ -1,11 +1,8 @@
-import { appStrings } from '@/lib/strings/app';
-import styles from './page.module.css';
+import { features } from '@/lib/features';
+import { requireSession } from '@/lib/server/session-cookie';
+import { LandingScreen } from './LandingScreen';
 
-export default function LandingPage() {
-  return (
-    <main className={styles.main}>
-      <h1 className={styles.title}>{appStrings.name}</h1>
-      <p className={styles.description}>{appStrings.description}</p>
-    </main>
-  );
+export default async function LandingPage() {
+  await requireSession('/');
+  return <LandingScreen features={features} />;
 }
