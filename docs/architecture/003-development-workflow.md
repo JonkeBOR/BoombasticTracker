@@ -86,6 +86,24 @@ derived trends, response parsing — while the calls that actually reach the dat
 that a single end-to-end path covers it. If that thin call ever grows logic worth asserting, that
 is the concrete need which justifies revisiting this, and not before.
 
+### Domain-only features
+
+Constitution 2.1.0 adds a path for a feature that adds domain rules or stored data but no screen or
+route the phone can reach. There is no phone-level behaviour for an outer Playwright test to
+describe, so the spec's acceptance scenarios take its place. They are written first as Vitest
+tests, confirmed failing for the intended reason, and the feature is done when they pass unmodified.
+`specs/002-fitness-domain-model` is the first such feature.
+
+In practice each user story starts by adding stub operations that throw `not implemented`, so the
+tests fail on behaviour and not on a missing import, and then writing that story's acceptance tests.
+The pure rules inside a story are driven by the ordinary inner loop. The first feature that exposes
+the domain to the phone brings its own Playwright test.
+
+Rules that need a database to prove, such as atomicity, immutability and profile isolation, live in
+`*.storage.test.ts` files that run in a separate `storage` Vitest project against a real local D1.
+See [006-domain-persistence.md](006-domain-persistence.md). The project is part of `check.ps1`, so
+the gate covers it.
+
 ## Consequences
 
 The quality gate is unchanged and the split now has a second reason behind it: the inner loop

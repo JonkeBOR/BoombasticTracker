@@ -32,7 +32,7 @@ than loading whole configs and stack traces into context.
 | Prettier               | All formatting; ESLint never fights it (`eslint-config-prettier` runs last) |
 | ESLint 9 (flat config) | Correctness and convention rules, including the `docs/01` rules             |
 | TypeScript             | Type checking via `tsc --noEmit`; the app is never built by these scripts   |
-| Vitest                 | Unit tests in a jsdom environment                                           |
+| Vitest                 | Unit tests (node and jsdom projects) and storage tests against local D1     |
 | Playwright             | End-to-end tests in mobile WebKit against a real dev server                 |
 
 Configuration lives in `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`,
@@ -73,7 +73,14 @@ Branch on the exit code rather than parsing the text.
     TEST: PASS  tests=1 passed=1 failed=0
 
 `SKIP` comes from `typecheck.ps1` when the repository contains no TypeScript at all, from
-`test.ps1` when no test file matches, and from `e2e.ps1` when no spec file matches.
+`test.ps1` when no test file matches, and from `e2e.ps1` when no spec file matches. `test.ps1`
+reports `ERROR` with exit 2, never `SKIP`, when Vitest exits non-zero without running any test.
+
+The test stage includes the `storage` project, which starts a local D1 and takes about 30 s, far
+longer than the other stages. To iterate on one file, use
+`npx vitest run --project storage <path>` rather than the whole gate, and run the gate before
+finishing. Two Vitest runs must not overlap: the storage setup wipes `.wrangler/test-state` at the
+start of every run.
 
 ## Which to run when
 

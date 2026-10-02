@@ -65,7 +65,9 @@ built with the OpenNext adapter (`@opennextjs/cloudflare`) and running with the 
 flag; the Workers runtime is not Node.js, so every server-side dependency MUST be verified to run
 there. Persistence: a **SQLite-family database** — **Cloudflare D1** in the cloud, reachable only
 through the Worker's binding, and a **local SQLite file** in development — with schema and
-migrations single-sourced in **Drizzle ORM** and checked into the repository. Authentication:
+migrations single-sourced in **Drizzle ORM** and checked into the repository. Drizzle MUST be
+introduced by the first feature that stores data, alongside that feature's tables, and not before.
+After that, every schema change MUST go through it. Authentication:
 **Google OAuth** for identity only, using the developer's own Google account/Google Cloud project.
 Testing: **Vitest** for unit tests and **Playwright** (mobile WebKit) for end-to-end tests, with a
 **Playwright MCP** browser for exploratory checks, as recorded in
@@ -88,7 +90,12 @@ belong in that feature's Spec Kit documents under `specs/`.
 Development is test-driven, as recorded in `docs/architecture/003-development-workflow.md`. Each
 feature MUST begin with one Playwright acceptance test in `e2e/`, written from the phone's point
 of view and confirmed failing for the intended reason before implementation starts; the feature is
-done when that test passes unmodified. Within a feature, domain logic, route handlers, data
+done when that test passes unmodified. A **domain-only feature** adds domain rules or stored data
+but no screen or route the phone can reach. It is exempt from the Playwright test, because no
+phone-level behaviour exists to check. Its spec acceptance scenarios MUST then serve as its acceptance
+tests instead: they are written first as Vitest tests, confirmed failing, and the feature is done
+when they pass unmodified. The first later feature that exposes the domain to the phone MUST bring
+its own Playwright acceptance test. Within a feature, domain logic, route handlers, data
 mapping, validation and synchronous component behaviour MUST be driven by a Vitest
 red-green-refactor loop. Styling and layout are exempt and are checked in a real browser instead.
 Business logic MUST live where Vitest can reach it — if a rule can only be tested through
@@ -110,4 +117,4 @@ equivalent) section rather than silently introduced. Use the guideline documents
 and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
 guidance that supplements, but does not override, this constitution.
 
-**Version**: 2.0.1 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-02
+**Version**: 2.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-02

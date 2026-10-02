@@ -18,6 +18,7 @@ not iterated in.
 | Situation                                                      | Tool               |
 | -------------------------------------------------------------- | ------------------ |
 | Domain logic, validation, data mapping, string modules         | Vitest (inner)     |
+| Storage behaviour: atomic writes, immutability, profile scoping | Vitest `storage`   |
 | Route handler - import it, call it with `new Request(...)`     | Vitest (inner)     |
 | Sync Server Component, Client Component                        | Vitest (inner)     |
 | Feature acceptance test, written before the feature            | Playwright (outer) |
@@ -61,6 +62,28 @@ a proxy for `*.module.css`, so `styles.main` resolves and the component renders.
 
 Assert against `appStrings` rather than a duplicated literal. That keeps tests inside the
 no-bare-strings discipline and makes them real regression tests for the strings wiring.
+
+## Storage tests (Vitest, local D1)
+
+Anything that needs a real database to prove - a batch rolling back, a trigger refusing an update, a
+query scoped to one profile - goes in `*.storage.test.ts`, which a third Vitest project (`storage`)
+runs against a local D1. Pure rules do not belong here; keep them in `domain/` and test them
+without a database.
+
+    npx vitest run --project storage src/features/fitness-tracker/server/training
+
+Open the database with `openTestDatabase()` from
+`src/features/fitness-tracker/server/storage-test-database.ts` in `beforeAll`. The connection is
+opened once and shared by every file, so tests must not depend on rows from other tests: create a
+fresh profile per test with `ensureProfile(db, crypto.randomUUID(), now)`. A test that installs a
+temporary trigger drops it in `finally`. `storage-test-support.ts` has `expectOk`, `messagesOf` and
+`rejectionOf`, and `createProgramFromSpec` for building a program from a short description.
+
+Never run two Vitest invocations at once: the setup wipes `.wrangler/test-state` at the start of
+each run. See `docs/architecture/006-domain-persistence.md`.
+
+For a domain-only feature (constitution 2.1.0) the spec's acceptance scenarios are written first as
+tests like these and are the feature's acceptance tests.
 
 ## End-to-end tests (Playwright)
 

@@ -21,7 +21,27 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['src/lib/**/*.test.ts', 'src/app/api/**/*.test.ts'],
+          include: [
+            'src/lib/**/*.test.ts',
+            'src/app/api/**/*.test.ts',
+            'src/features/**/*.test.ts',
+          ],
+          exclude: ['**/*.storage.test.ts', '**/node_modules/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'storage',
+          environment: 'node',
+          include: ['src/**/*.storage.test.ts'],
+          globalSetup: ['./vitest.storage-setup.ts'],
+          testTimeout: 30000,
+          hookTimeout: 60000,
+          fileParallelism: false,
+          isolate: false,
+          maxWorkers: 1,
+          sequence: { groupOrder: 1 },
         },
       },
       {

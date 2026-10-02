@@ -1,0 +1,82 @@
+import type { Result } from '../domain/result';
+import type { Program } from '../domain/types';
+import type { Database } from '@/lib/server/database';
+import { addExercise, listExercises } from './exercises';
+import { addExerciseSlot, addWorkout, createProgram } from './programs';
+
+export function expectOk<T, E extends string>(result: Result<T, E>): T {
+  if (!result.ok) {
+    throw new Error(`Expected the operation to succeed but it was refused: ${result.error}`);
+  }
+  return result.value;
+}
+
+export type ProgramSpec = {
+  name?: string;
+  blockCount: number;
+  workouts: { name: string; slots: { exercise: string; targetReps: number[] }[] }[];
+};
+
+async function exerciseIdByName(
+  db: Database,
+  profileId: string,
+  name: string,
+  now: Date,
+): Promise<string> {
+  const existing = (await listExercises(db, profileId, { includeArchived: true })).find(
+    (exercise) => exercise.name === name,
+  );
+  if (existing) {
+    return existing.id;
+  }
+  return expectOk(await addExercise(db, profileId, { name }, now)).id;
+}
+
+export async function createProgramFromSpec(
+  db: Database,
+  profileId: string,
+  spec: ProgramSpec,
+  now: Date,
+): Promise<Program> {
+  let program = expectOk(
+    await createProgram(
+      db,
+      profileId,
+      { name: spec.name ?? 'Test program', blockCount: spec.blockCount },
+      now,
+    ),
+  );
+  for (const workoutSpec of spec.workouts) {
+    program = expectOk(await addWorkout(db, profileId, program.id, { name: workoutSpec.name }));
+    const workout = program.workouts.find((candidate) => candidate.name === workoutSpec.name);
+    for (const slotSpec of workoutSpec.slots) {
+      const exerciseId = await exerciseIdByName(db, profileId, slotSpec.exercise, now);
+      program = expectOk(
+        await addExerciseSlot(db, profileId, workout?.id ?? '', {
+          exerciseId,
+          targetReps: slotSpec.targetReps,
+        }),
+      );
+    }
+  }
+  return program;
+}
+
+export function messagesOf(error: unknown): string {
+  const messages: string[] = [];
+  let current: unknown = error;
+  while (current instanceof Error) {
+    messages.push(current.message);
+    current = current.cause;
+  }
+  return messages.join(' | ');
+}
+
+export async function rejectionOf(run: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await run();
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+}
