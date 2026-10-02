@@ -114,16 +114,22 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 npx wrangler secret put SESSION_SECRET
 ```
 
-Apply migrations to D1, then build and deploy:
+Deploys run only from GitHub Actions: every push to `main` runs the quality gate, applies D1
+migrations and deploys (`.github/workflows/deploy.yml`). It needs `CLOUDFLARE_API_TOKEN` as a
+secret of the `production` environment, scoped to Workers Scripts: Edit and D1: Edit on this
+account:
 
 ```powershell
-npx wrangler d1 migrations apply onestopshop --remote
-npm run deploy
+gh secret set CLOUDFLARE_API_TOKEN --env production
 ```
 
-The deploy prints the Worker's `*.workers.dev` address. Add its callback URI to the Google OAuth
-client (section 2, step 3). The free Workers plan limits the Worker to 3 MiB compressed, and the
-build output reports the size.
+Never deploy from a working copy. OpenNext copies every `.env*` file it finds into the Worker
+bundle, so a build on a machine with `.env.local` uploads the local secrets. If the workflow is
+unavailable, deploy from a fresh clone that has no `.env*` files.
+
+The Worker's address is `https://onestopshop.<sub>.workers.dev`. Add its callback URI to the
+Google OAuth client (section 2, step 3). The free Workers plan limits the Worker to 3 MiB
+compressed, and the build output reports the size.
 
 ## 7. Verifying each environment
 
