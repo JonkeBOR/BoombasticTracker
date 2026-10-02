@@ -39,9 +39,14 @@ the fitness tracker at `/fitness-tracker` is a placeholder. `wrangler.jsonc` con
 and the D1 binding, and `migrations/` holds a baseline that creates no tables. See
 [004-hosting-and-persistence.md](docs/architecture/004-hosting-and-persistence.md).
 
+Deployment is continuous: `.github/workflows/deploy.yml` runs the gate, the remote D1 migrations
+and the OpenNext build and deploy on every push to `main`. Merging is deploying. There is no local
+deploy script, because OpenNext bundles every `.env*` file into the Worker. See
+[005-continuous-deployment.md](docs/architecture/005-continuous-deployment.md).
+
 Not built yet: any fitness data or schema, Drizzle ORM (deferred until the first table),
-`src/components/`, `src/features/`, and CI. Those are created when they have a real occupant, not
-before.
+`src/components/`, `src/features/`, and checks on pull requests. Those are created when they have
+a real occupant, not before.
 
 ## Commands
 

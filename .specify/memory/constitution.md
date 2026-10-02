@@ -7,7 +7,7 @@ OneStopShop is a personal, low-traffic application and a learning project, not a
 enterprise system. Every architecture, tooling, or infrastructure decision MUST prefer
 **simple + understandable + secure enough + easy to deploy** over enterprise-style patterns.
 Do not introduce a service, abstraction layer, framework, or infrastructure component unless a
-concrete technical need justifies it. Decisions not yet required (e.g. schema design, CI/CD) are deferred rather than solved speculatively.
+concrete technical need justifies it. Decisions not yet required (e.g. schema design, pull-request checks) are deferred rather than solved speculatively.
 
 **Rationale**: The project exists partly to give the developer hands-on React/Next.js experience
 without the overhead of production-grade infrastructure a personal single-user app does not need.
@@ -78,7 +78,7 @@ here and in `docs/architecture/`.
 The following remain intentionally undecided until actually needed, per Principle I: exact Google
 OAuth library/session-management implementation, database schema beyond what a feature needs,
 API endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
-support, error handling strategy, and CI/CD. Each MUST be decided incrementally,
+support, error handling strategy, and pull-request checks. Each MUST be decided incrementally,
 at the point of implementation, rather than speculatively up front — and each cross-cutting
 decision should be captured in `docs/architecture/` once made, while feature-scoped decisions
 belong in that feature's Spec Kit documents under `specs/`.
@@ -110,4 +110,4 @@ equivalent) section rather than silently introduced. Use the guideline documents
 and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
 guidance that supplements, but does not override, this constitution.
 
-**Version**: 2.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-01
+**Version**: 2.0.1 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-02
