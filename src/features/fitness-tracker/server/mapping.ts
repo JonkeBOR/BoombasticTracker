@@ -1,0 +1,126 @@
+import 'server-only';
+import type {
+  BodyweightEntry,
+  Cycle,
+  Exercise,
+  PlannedSetView,
+  Program,
+  SetLog,
+} from '../domain/types';
+import { gramsToKg } from '../domain/values';
+import type {
+  bodyweightEntries,
+  cycles,
+  exerciseSlots,
+  exercises,
+  plannedSets,
+  programs,
+  setLogs,
+  trainingBlocks,
+  workouts,
+} from './schema';
+
+export type ExerciseRow = typeof exercises.$inferSelect;
+export type CycleRow = typeof cycles.$inferSelect;
+export type SetLogRow = typeof setLogs.$inferSelect;
+export type BodyweightEntryRow = typeof bodyweightEntries.$inferSelect;
+export type PlannedSetRow = typeof plannedSets.$inferSelect;
+export type SlotRow = typeof exerciseSlots.$inferSelect;
+export type WorkoutRow = typeof workouts.$inferSelect;
+export type BlockRow = typeof trainingBlocks.$inferSelect;
+export type ProgramRow = typeof programs.$inferSelect;
+
+export type ProgramRows = {
+  program: ProgramRow;
+  isActive: boolean;
+  blocks: BlockRow[];
+  workouts: (WorkoutRow & {
+    slots: (SlotRow & { exercise: ExerciseRow; plannedSets: PlannedSetRow[] })[];
+  })[];
+  cycles: CycleRow[];
+};
+
+function byPosition<T extends { position: number }>(items: readonly T[]): T[] {
+  return [...items].sort((left, right) => left.position - right.position);
+}
+
+function nullableGramsToKg(grams: number | null): number | null {
+  return grams === null ? null : gramsToKg(grams);
+}
+
+export function toExercise(row: ExerciseRow): Exercise {
+  return { id: row.id, name: row.name, isArchived: row.archivedAt !== null };
+}
+
+export function toCycle(row: CycleRow): Cycle {
+  return {
+    id: row.id,
+    number: row.number,
+    status: row.status,
+    currentBlockNumber: row.currentBlockNumber,
+    startedAt: row.startedAt,
+    endedAt: row.endedAt,
+  };
+}
+
+export function toSetLog(row: SetLogRow): SetLog {
+  return {
+    id: row.id,
+    exerciseId: row.exerciseId,
+    performedAt: row.performedAt,
+    setNumber: row.setNumber,
+    reps: row.reps,
+    weightKg: nullableGramsToKg(row.weightGrams),
+    context: {
+      programId: row.programId,
+      cycleId: row.cycleId,
+      cycleNumber: row.cycleNumber,
+      trainingBlockId: row.trainingBlockId,
+      blockNumber: row.blockNumber,
+      workoutId: row.workoutId,
+      exerciseSlotId: row.exerciseSlotId,
+      workoutSessionId: row.workoutSessionId,
+    },
+  };
+}
+
+export function toBodyweightEntry(row: BodyweightEntryRow): BodyweightEntry {
+  return { id: row.id, date: row.entryDate, weightKg: gramsToKg(row.weightGrams) };
+}
+
+function toPlannedSetView(row: PlannedSetRow): PlannedSetView {
+  return {
+    id: row.id,
+    setNumber: row.setNumber,
+    targetReps: row.targetReps,
+    lastWeightKg: nullableGramsToKg(row.lastWeightGrams),
+  };
+}
+
+export function toProgram(rows: ProgramRows): Program {
+  const blocks = byPosition(rows.blocks);
+  const activeCycle = rows.cycles.find((cycle) => cycle.status === 'active');
+  return {
+    id: rows.program.id,
+    name: rows.program.name,
+    isActive: rows.isActive,
+    blocks: blocks.map((block) => ({ id: block.id, number: block.position, label: block.label })),
+    workouts: byPosition(rows.workouts).map((workout) => ({
+      id: workout.id,
+      name: workout.name,
+      slots: byPosition(workout.slots).map((slot) => ({
+        id: slot.id,
+        exercise: toExercise(slot.exercise),
+        isOptional: slot.isOptional,
+        prescriptions: blocks.map((block) => ({
+          blockId: block.id,
+          plannedSets: slot.plannedSets
+            .filter((plannedSet) => plannedSet.trainingBlockId === block.id)
+            .sort((left, right) => left.setNumber - right.setNumber)
+            .map(toPlannedSetView),
+        })),
+      })),
+    })),
+    activeCycle: activeCycle ? toCycle(activeCycle) : null,
+  };
+}

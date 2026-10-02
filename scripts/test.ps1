@@ -74,6 +74,14 @@ try {
 
     $total = [int]$report.numTotalTests
     if ($total -eq 0) {
+        if ($result.ExitCode -ne 0) {
+            $detail = @($result.StdErr -split '\r?\n' | Where-Object { $_.Trim() }) | Select-Object -First 1
+            if (-not $detail) {
+                $detail = "vitest exited with code $($result.ExitCode) and ran no tests"
+            }
+            Write-CheckResult -Name 'test' -Status 'ERROR' -Summary $detail -AsJson:$Json
+            exit $script:ExitError
+        }
         Write-CheckResult -Name 'test' -Status 'SKIP' -Summary 'no test files yet' -AsJson:$Json
         exit $script:ExitPass
     }

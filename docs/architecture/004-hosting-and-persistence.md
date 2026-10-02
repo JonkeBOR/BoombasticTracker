@@ -66,14 +66,12 @@ The database is Cloudflare D1, bound as `DB`. Locally it is the SQLite file Wran
 environments.
 
 Migrations are plain SQL files in `migrations/`, applied with
-`wrangler d1 migrations apply --local|--remote`. The baseline `0001_baseline.sql` creates no tables;
-it holds `SELECT 1;` because Wrangler refuses a migration with no statements.
+`wrangler d1 migrations apply --local|--remote`. When this record was written the only migration
+was a baseline holding `SELECT 1;`, because Wrangler refuses a migration with no statements.
 
-The constitution names Drizzle ORM as the source of schema and migrations. It is deferred until the
-first table, because `drizzle-kit generate` needs a schema file and this feature defines none. At
-that point the open question is layout: current `drizzle-kit` writes a folder per migration, while
-Wrangler applies flat `.sql` files from `migrations_dir`. Whatever Drizzle generates must sort
-after `0001_baseline.sql`; Wrangler tracks applied files by name in its `d1_migrations` table.
+Drizzle ORM, deferred here until the first table, arrived with `specs/002-fitness-domain-model`.
+The baseline was removed, Drizzle's generated files now live in `migrations/`, and how they meet
+Wrangler is recorded in [006-domain-persistence.md](006-domain-persistence.md).
 
 ### Configuration
 
