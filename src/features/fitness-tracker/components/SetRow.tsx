@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { fitnessErrorStrings, fitnessStrings } from '@/lib/strings/fitness';
 import type { SessionPlannedSet, SetLog } from '../domain/types';
@@ -54,7 +55,7 @@ export function SetRow({
         <td className={styles.value}>{logged.reps}</td>
         <td className={styles.action}>
           <span className={styles.check} aria-hidden="true">
-            {fitnessStrings.session.logSymbol}
+            <Check className={styles.checkIcon} />
           </span>
           <span className={styles.visuallyHidden}>
             {fitnessStrings.session.loggedLabel(plannedSet.setNumber)}
@@ -127,7 +128,7 @@ export function SetRow({
             disabled={action.pending}
             onClick={() => void log()}
           >
-            {fitnessStrings.session.logSymbol}
+            <Check className={styles.checkIcon} aria-hidden="true" />
           </button>
         </td>
       </tr>

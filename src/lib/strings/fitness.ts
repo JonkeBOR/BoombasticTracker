@@ -192,7 +192,6 @@ export const fitnessStrings = {
         ? `Log, set ${setNumber}`
         : `Log, set ${setNumber}, ${exerciseName}`,
     loggedLabel: (setNumber: number) => `Set ${setNumber} logged`,
-    logSymbol: '✓',
     columns: { set: 'Set', weight: 'Weight (kg)', reps: 'Reps', log: 'Log' },
     finishWorkout: 'Finish workout',
     finishEmptyConfirmLabel: 'Finish',
