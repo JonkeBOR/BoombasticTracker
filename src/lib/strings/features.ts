@@ -4,6 +4,5 @@ export const featureStrings = {
   fitnessTracker: {
     title: 'Fitness Tracker',
     description: 'Workouts, sets and bodyweight over time.',
-    placeholder: 'Tracking workouts and bodyweight is coming soon.',
   },
 } as const;

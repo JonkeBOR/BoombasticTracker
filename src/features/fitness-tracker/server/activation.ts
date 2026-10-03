@@ -1,23 +1,23 @@
 import 'server-only';
-import { and, asc, eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { Database } from '@/lib/server/database';
 import { isActivatable } from '../domain/program';
-import { decideActivation, decideStartOver } from '../domain/progression';
+import { decideSkip } from '../domain/progression';
 import { fail, type Result, succeed } from '../domain/result';
 import type { Cycle } from '../domain/types';
-import { runBatch, type Statement } from './batch';
-import { endCycleStatements, startCycleStatement } from './cycle-statements';
-import { type CycleRow, toCycle } from './mapping';
+import { runBatch } from './batch';
+import { closeInProgressStatements, startPassStatements } from './cycle-statements';
+import { toCycle } from './mapping';
 import { loadProgramRows } from './programs';
-import { cycles, profiles, programs } from './schema';
+import { cycles, profiles, trainingBlocks } from './schema';
 
-async function activeCycleOf(db: Database, programId: string): Promise<Cycle | null> {
-  const [row] = await db
-    .select()
-    .from(cycles)
-    .where(and(eq(cycles.programId, programId), eq(cycles.status, 'active')))
+async function activeProgramIdOf(db: Database, profileId: string): Promise<string | null> {
+  const [profile] = await db
+    .select({ activeProgramId: profiles.activeProgramId })
+    .from(profiles)
+    .where(eq(profiles.id, profileId))
     .limit(1);
-  return row ? toCycle(row) : null;
+  return profile?.activeProgramId ?? null;
 }
 
 export async function activateProgram(
@@ -39,63 +39,19 @@ export async function activateProgram(
   if (!activatable) {
     return fail('program-incomplete');
   }
-
-  const [profile] = await db
-    .select({ activeProgramId: profiles.activeProgramId })
-    .from(profiles)
-    .where(eq(profiles.id, profileId))
-    .limit(1);
-  const previousProgramId = profile?.activeProgramId ?? null;
-  const previousCycle =
-    previousProgramId !== null && previousProgramId !== programId
-      ? await activeCycleOf(db, previousProgramId)
-      : null;
-  const targetActive = rows.cycles.find((cycle) => cycle.status === 'active');
-  const decision = decideActivation({
-    isAlreadyActive: rows.isActive,
-    previousActiveCycleId: previousCycle?.id ?? null,
-    targetActiveCycleId: targetActive?.id ?? null,
-    targetLastCycleNumber: Math.max(0, ...rows.cycles.map((cycle) => cycle.number)),
-  });
-
-  const statements: Statement[] = [];
-  if (decision.endCycleId !== null) {
-    statements.push(
-      ...endCycleStatements(db, { id: decision.endCycleId, status: 'ended_early' }, now),
-    );
-  }
-  if (decision.setActiveProgram) {
-    statements.push(
-      db.update(profiles).set({ activeProgramId: programId }).where(eq(profiles.id, profileId)),
-    );
-  }
-  if (decision.startCycleNumber !== null) {
-    statements.push(startCycleStatement(db, { programId, number: decision.startCycleNumber }, now));
-  }
-  await runBatch(db, statements);
-
-  const cycle = await activeCycleOf(db, programId);
+  const [cycle] = rows.cycles;
   if (!cycle) {
-    throw new Error('The program has no active cycle after it was activated');
+    throw new Error(`The program ${programId} has no cycle`);
   }
-  return succeed(cycle);
-}
-
-async function loadActiveCycleRow(db: Database, profileId: string): Promise<CycleRow | null> {
-  const [profile] = await db
-    .select({ activeProgramId: profiles.activeProgramId })
-    .from(profiles)
-    .where(eq(profiles.id, profileId))
-    .limit(1);
-  if (!profile?.activeProgramId) {
-    return null;
+  if (rows.isActive) {
+    return succeed(toCycle(cycle));
   }
-  const [cycle] = await db
-    .select()
-    .from(cycles)
-    .where(and(eq(cycles.programId, profile.activeProgramId), eq(cycles.status, 'active')))
-    .limit(1);
-  return cycle ?? null;
+  const previousProgramId = await activeProgramIdOf(db, profileId);
+  await runBatch(db, [
+    ...(previousProgramId === null ? [] : closeInProgressStatements(db, previousProgramId, now)),
+    db.update(profiles).set({ activeProgramId: programId }).where(eq(profiles.id, profileId)),
+  ]);
+  return succeed(toCycle(cycle));
 }
 
 export async function pauseActiveProgram(
@@ -103,48 +59,59 @@ export async function pauseActiveProgram(
   profileId: string,
   now: Date,
 ): Promise<Result<void, 'no-active-program'>> {
-  const cycle = await loadActiveCycleRow(db, profileId);
-  if (!cycle) {
+  const programId = await activeProgramIdOf(db, profileId);
+  if (programId === null) {
     return fail('no-active-program');
   }
   await runBatch(db, [
-    ...endCycleStatements(db, { id: cycle.id, status: 'ended_early' }, now),
+    ...closeInProgressStatements(db, programId, now),
     db.update(profiles).set({ activeProgramId: null }).where(eq(profiles.id, profileId)),
   ]);
   return succeed(undefined);
 }
 
-export async function startOver(
+export async function skipToBlock(
   db: Database,
   profileId: string,
+  input: { blockId: string },
   now: Date,
-): Promise<Result<Cycle, 'no-active-program'>> {
-  const cycle = await loadActiveCycleRow(db, profileId);
-  if (!cycle) {
+): Promise<Result<{ newPass: boolean }, 'no-active-program' | 'invalid-block'>> {
+  const programId = await activeProgramIdOf(db, profileId);
+  if (programId === null) {
     return fail('no-active-program');
   }
-  const decision = decideStartOver(cycle);
-  await runBatch(db, [
-    ...endCycleStatements(db, { id: cycle.id, status: 'ended_early' }, now),
-    startCycleStatement(db, { programId: cycle.programId, number: decision.newCycleNumber }, now),
+  const [cycleRows, blockRows] = await Promise.all([
+    db.select().from(cycles).where(eq(cycles.programId, programId)).limit(1),
+    db
+      .select({ id: trainingBlocks.id })
+      .from(trainingBlocks)
+      .where(eq(trainingBlocks.programId, programId))
+      .orderBy(asc(trainingBlocks.position)),
   ]);
-  const fresh = await activeCycleOf(db, cycle.programId);
-  if (!fresh) {
-    throw new Error('The program has no active cycle after starting over');
+  const [cycle] = cycleRows;
+  const blockIds = blockRows.map((block) => block.id);
+  const firstBlockId = blockIds[0];
+  if (!cycle || firstBlockId === undefined) {
+    throw new Error(`The program ${programId} has no cycle or no block`);
   }
-  return succeed(fresh);
-}
-
-export async function listCycles(
-  db: Database,
-  profileId: string,
-  programId: string,
-): Promise<Cycle[]> {
-  const rows = await db
-    .select({ cycle: cycles })
-    .from(cycles)
-    .innerJoin(programs, eq(programs.id, cycles.programId))
-    .where(and(eq(cycles.programId, programId), eq(programs.profileId, profileId)))
-    .orderBy(asc(cycles.number));
-  return rows.map((row) => toCycle(row.cycle));
+  const decision = decideSkip({
+    blockIds,
+    currentBlockId: cycle.currentBlockId,
+    targetBlockId: input.blockId,
+  });
+  if (!decision.ok) {
+    return fail(decision.error);
+  }
+  if (decision.value.kind === 'new-pass') {
+    await runBatch(db, startPassStatements(db, { id: cycle.id, programId }, firstBlockId, now));
+    return succeed({ newPass: true });
+  }
+  await runBatch(db, [
+    ...closeInProgressStatements(db, programId, now),
+    db
+      .update(cycles)
+      .set({ currentBlockId: decision.value.toBlockId })
+      .where(eq(cycles.id, cycle.id)),
+  ]);
+  return succeed({ newPass: false });
 }

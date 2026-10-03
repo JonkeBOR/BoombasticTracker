@@ -270,17 +270,17 @@ describe('editing programs without losing history', () => {
     expect((await historyRows()).logs.map((log) => log.reps)).toEqual([10, 10]);
   });
 
-  it('FR-039: removing the only unfinished workout of the current block advances the cycle', async () => {
+  it('FR-039: removing the only unfinished workout of the current block advances to the next block', async () => {
     const { db } = testDatabase;
     const program = await activate(twoWorkouts);
     const [upper, lower] = program.workouts;
     const session = expectOk(await startWorkout(db, profileId, upper?.id ?? '', tick()));
     expectOk(await finishWorkout(db, profileId, session.id, tick()));
-    expect((await getTrainingOverview(db, profileId))?.block.number).toBe(1);
+    expect((await getTrainingOverview(db, profileId))?.currentBlock.number).toBe(1);
 
     expectOk(await removeWorkout(db, profileId, lower?.id ?? '', tick()));
 
-    expect((await getTrainingOverview(db, profileId))?.block.number).toBe(2);
+    expect((await getTrainingOverview(db, profileId))?.currentBlock.number).toBe(2);
   });
 
   it('FR-039: adding a workout mid-block keeps the block incomplete until it is finished too', async () => {
@@ -293,11 +293,11 @@ describe('editing programs without losing history', () => {
     const extraId = extra.workouts[2]?.id ?? '';
 
     const second = expectOk(await startWorkout(db, profileId, lower?.id ?? '', tick()));
-    expect(expectOk(await finishWorkout(db, profileId, second.id, tick()))).toEqual({
+    expect(expectOk(await finishWorkout(db, profileId, second.id, tick()))).toMatchObject({
       progression: 'none',
     });
     const third = expectOk(await startWorkout(db, profileId, extraId, tick()));
-    expect(expectOk(await finishWorkout(db, profileId, third.id, tick()))).toEqual({
+    expect(expectOk(await finishWorkout(db, profileId, third.id, tick()))).toMatchObject({
       progression: 'block-advanced',
     });
   });
@@ -317,25 +317,21 @@ describe('editing programs without losing history', () => {
     workouts: [{ name: 'Only', slots: [{ exercise: 'Squat', targetReps: [5] }] }],
   };
 
-  it('FR-039: removing the current last block completes the cycle, because the blocks before it are finished', async () => {
+  it('FR-039, FR-043: removing the current last block starts a new pass, because the blocks before it are finished', async () => {
     const { db } = testDatabase;
     const program = await activate(fourBlocksOneWorkout);
     await finishOnlyWorkoutBlocks(program, 3);
-    expect((await getTrainingOverview(db, profileId))?.block.number).toBe(4);
-    const removedAt = tick();
+    expect((await getTrainingOverview(db, profileId))?.currentBlock.number).toBe(4);
 
-    expectOk(await removeTrainingBlock(db, profileId, program.blocks[3]?.id ?? '', removedAt));
+    expectOk(await removeTrainingBlock(db, profileId, program.blocks[3]?.id ?? '', tick()));
 
     const overview = await getTrainingOverview(db, profileId);
-    expect(overview?.cycle).toMatchObject({
-      number: 2,
-      currentBlockNumber: 1,
-      startedAt: removedAt,
-    });
-    expect(overview?.block).toMatchObject({ number: 1, count: 3 });
+    expect(expectOk(await getProgram(db, profileId, program.id)).cycle.pass).toBe(2);
+    expect(overview?.currentBlock).toMatchObject({ number: 1 });
+    expect(overview?.blocks).toHaveLength(3);
   });
 
-  it('FR-039: removing a block after the current one leaves the cycle where it is', async () => {
+  it('FR-039: removing a block after the current one leaves the program where it is', async () => {
     const { db } = testDatabase;
     const program = await activate(fourBlocksOneWorkout);
     await finishOnlyWorkoutBlocks(program, 2);
@@ -343,8 +339,9 @@ describe('editing programs without losing history', () => {
     expectOk(await removeTrainingBlock(db, profileId, program.blocks[3]?.id ?? '', tick()));
 
     const overview = await getTrainingOverview(db, profileId);
-    expect(overview?.cycle.number).toBe(1);
-    expect(overview?.block).toMatchObject({ number: 3, count: 3 });
+    expect(expectOk(await getProgram(db, profileId, program.id)).cycle.pass).toBe(1);
+    expect(overview?.currentBlock).toMatchObject({ number: 3 });
+    expect(overview?.blocks).toHaveLength(3);
   });
 
   it('refuses to remove the last remaining block', async () => {

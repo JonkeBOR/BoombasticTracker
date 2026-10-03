@@ -1,8 +1,9 @@
 import type { Result } from '../domain/result';
-import type { Program } from '../domain/types';
+import type { Program, TrainingOverview } from '../domain/types';
 import type { Database } from '@/lib/server/database';
 import { addExercise, listExercises } from './exercises';
 import { addExerciseSlot, addWorkout, createProgram } from './programs';
+import { finishWorkout, getTrainingOverview, startWorkout } from './training';
 
 export function expectOk<T, E extends string>(result: Result<T, E>): T {
   if (!result.ok) {
@@ -60,6 +61,28 @@ export async function createProgramFromSpec(
     }
   }
   return program;
+}
+
+export async function activeOverview(db: Database, profileId: string): Promise<TrainingOverview> {
+  const overview = await getTrainingOverview(db, profileId);
+  if (!overview) {
+    throw new Error('Expected the profile to have an active program');
+  }
+  return overview;
+}
+
+export async function finishBlock(
+  db: Database,
+  profileId: string,
+  nextTime: () => Date,
+): Promise<'none' | 'block-advanced' | 'new-pass'> {
+  const overview = await activeOverview(db, profileId);
+  let progression: 'none' | 'block-advanced' | 'new-pass' = 'none';
+  for (const workout of overview.workouts.filter((entry) => entry.status !== 'finished')) {
+    const session = expectOk(await startWorkout(db, profileId, workout.id, nextTime()));
+    progression = expectOk(await finishWorkout(db, profileId, session.id, nextTime())).progression;
+  }
+  return progression;
 }
 
 export function messagesOf(error: unknown): string {

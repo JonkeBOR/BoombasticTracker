@@ -3,11 +3,11 @@ import { and, asc, eq, isNull, ne } from 'drizzle-orm';
 import type { Database } from '@/lib/server/database';
 import { exerciseNameKey } from '../domain/exercise';
 import { fail, type Result, succeed } from '../domain/result';
-import type { Exercise } from '../domain/types';
+import type { Exercise, ExerciseUsage } from '../domain/types';
 import { parseName } from '../domain/values';
 import { isUniqueConstraintViolation } from './batch';
 import { toExercise } from './mapping';
-import { exerciseSlots, exercises, setLogs } from './schema';
+import { exerciseSlots, exercises, programs, setLogs, workouts } from './schema';
 
 type NameError = 'name-required' | 'name-too-long' | 'name-taken';
 
@@ -160,4 +160,49 @@ export async function deleteExercise(
   }
   await db.delete(exercises).where(eq(exercises.id, exerciseId));
   return succeed(undefined);
+}
+
+export async function getExerciseUsage(
+  db: Database,
+  profileId: string,
+  exerciseId: string,
+): Promise<Result<ExerciseUsage, 'not-found'>> {
+  const [exercise] = await db
+    .select()
+    .from(exercises)
+    .where(and(eq(exercises.id, exerciseId), eq(exercises.profileId, profileId)))
+    .limit(1);
+  if (!exercise) {
+    return fail('not-found');
+  }
+  const [slots, [log]] = await Promise.all([
+    db
+      .selectDistinct({
+        programId: programs.id,
+        programName: programs.name,
+        workoutId: workouts.id,
+        workoutName: workouts.name,
+        workoutPosition: workouts.position,
+      })
+      .from(exerciseSlots)
+      .innerJoin(workouts, eq(workouts.id, exerciseSlots.workoutId))
+      .innerJoin(programs, eq(programs.id, workouts.programId))
+      .where(and(eq(exerciseSlots.exerciseId, exerciseId), eq(programs.profileId, profileId)))
+      .orderBy(asc(programs.name), asc(workouts.position)),
+    db
+      .select({ id: setLogs.id })
+      .from(setLogs)
+      .where(and(eq(setLogs.profileId, profileId), eq(setLogs.exerciseId, exerciseId)))
+      .limit(1),
+  ]);
+  return succeed({
+    exercise: toExercise(exercise),
+    slots: slots.map(({ programId, programName, workoutId, workoutName }) => ({
+      programId,
+      programName,
+      workoutId,
+      workoutName,
+    })),
+    hasSetLogs: log !== undefined,
+  });
 }

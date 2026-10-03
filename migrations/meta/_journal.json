@@ -15,6 +15,27 @@
       "when": 1790977206832,
       "tag": "0001_set_log_immutability",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791028292308,
+      "tag": "0002_cycle_container_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791028376797,
+      "tag": "0003_cycle_container_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791028398716,
+      "tag": "0004_cycle_container_schema",
+      "breakpoints": true
     }
   ]
 }

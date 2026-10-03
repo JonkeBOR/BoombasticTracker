@@ -1,44 +1,44 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Database } from '@/lib/server/database';
 import type { Statement } from './batch';
 import { cycles, workoutSessions } from './schema';
 
-export function endCycleStatements(
-  db: Database,
-  cycle: { id: string; status: 'completed' | 'ended_early'; currentBlockNumber?: number },
-  now: Date,
-): Statement[] {
+export function closeInProgressStatements(db: Database, programId: string, now: Date): Statement[] {
   return [
-    db
-      .update(cycles)
-      .set({
-        status: cycle.status,
-        endedAt: now,
-        ...(cycle.currentBlockNumber === undefined
-          ? {}
-          : { currentBlockNumber: cycle.currentBlockNumber }),
-      })
-      .where(eq(cycles.id, cycle.id)),
     db
       .update(workoutSessions)
       .set({ status: 'finished', finishedAt: now })
-      .where(and(eq(workoutSessions.cycleId, cycle.id), eq(workoutSessions.status, 'in_progress'))),
+      .where(
+        and(eq(workoutSessions.programId, programId), eq(workoutSessions.status, 'in_progress')),
+      ),
   ];
 }
 
-export function startCycleStatement(
+export function startPassStatements(
   db: Database,
-  cycle: { programId: string; number: number },
+  cycle: { id: string; programId: string },
+  firstBlockId: string,
   now: Date,
+): Statement[] {
+  return [
+    ...closeInProgressStatements(db, cycle.programId, now),
+    db
+      .update(cycles)
+      .set({ pass: sql`${cycles.pass} + 1`, currentBlockId: firstBlockId })
+      .where(eq(cycles.id, cycle.id)),
+  ];
+}
+
+export function insertCycleStatement(
+  db: Database,
+  programId: string,
+  firstBlockId: string,
 ): Statement {
   return db.insert(cycles).values({
     id: crypto.randomUUID(),
-    programId: cycle.programId,
-    number: cycle.number,
-    status: 'active',
-    currentBlockNumber: 1,
-    startedAt: now,
-    endedAt: null,
+    programId,
+    currentBlockId: firstBlockId,
+    pass: 1,
   });
 }

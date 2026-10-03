@@ -1,11 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { activateProgram, listCycles } from './activation';
+import { activateProgram, skipToBlock } from './activation';
 import { getWeighInStatus, listBodyweight, recordBodyweight } from './bodyweight';
 import {
   addExercise,
   archiveExercise,
   deleteExercise,
+  getExerciseUsage,
   listExercises,
   renameExercise,
   unarchiveExercise,
@@ -114,6 +115,7 @@ describe('profile isolation', () => {
       unarchiveExercise(db, intruderId, exerciseId),
       deleteExercise(db, intruderId, exerciseId),
       getExerciseHistory(db, intruderId, exerciseId),
+      getExerciseUsage(db, intruderId, exerciseId),
       getProgram(db, intruderId, program.id),
       renameProgram(db, intruderId, program.id, { name: 'Stolen' }),
       addTrainingBlock(db, intruderId, program.id, {}),
@@ -144,11 +146,13 @@ describe('profile isolation', () => {
     for (const refusal of refusals) {
       expect(refusal).toEqual(notFound);
     }
+    expect(
+      await skipToBlock(db, intruderId, { blockId: program.blocks[1]?.id ?? '' }, now),
+    ).toEqual({ ok: false, error: 'invalid-block' });
     expect(await startWorkout(db, intruderId, workout?.id ?? '', now)).toEqual({
       ok: false,
       error: 'workout-not-in-active-program',
     });
-    expect(await listCycles(db, intruderId, program.id)).toEqual([]);
     expect(await listExercises(db, intruderId, { includeArchived: true })).toHaveLength(1);
     expect(await listPrograms(db, intruderId)).toHaveLength(1);
     expect(await listBodyweight(db, intruderId)).toEqual([]);

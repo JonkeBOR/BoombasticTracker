@@ -1,0 +1,433 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { sessionFixture } from '@/features/fitness-tracker/components/test-fixtures';
+import type { SessionView, SetLog } from '@/features/fitness-tracker/domain/types';
+import { fitnessErrorStrings, fitnessStrings } from '@/lib/strings/fitness';
+import { WorkoutSessionScreen } from './WorkoutSessionScreen';
+
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
+
+let sessionCounter = 0;
+
+function freshSession(overrides: Partial<SessionView> = {}): SessionView {
+  sessionCounter += 1;
+  return sessionFixture({ id: `session-${sessionCounter}`, ...overrides });
+}
+
+function loggedSet(overrides: Partial<SetLog> = {}): SetLog {
+  return {
+    id: 'log-1',
+    exerciseId: 'e1',
+    performedAt: new Date('2026-10-03T08:05:00Z'),
+    setNumber: 1,
+    reps: 12,
+    weightKg: 65,
+    context: {
+      programId: 'pr',
+      cycleId: 'c1',
+      pass: 1,
+      trainingBlockId: 'b2',
+      blockNumber: 2,
+      workoutId: 'w1',
+      exerciseSlotId: 's1',
+      workoutSessionId: 'session-x',
+    },
+    ...overrides,
+  };
+}
+
+function withFirstSetLogged(session: SessionView): SessionView {
+  return {
+    ...session,
+    slots: session.slots.map((slot) =>
+      slot.id === 's1' ? { ...slot, loggedSets: [loggedSet()] } : slot,
+    ),
+  };
+}
+
+describe('WorkoutSessionScreen', () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute('open', '');
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute('open');
+    };
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock.mockResolvedValue(Response.json({}));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+    router.refresh.mockReset();
+    router.push.mockReset();
+    window.localStorage.clear();
+  });
+
+  const bench = 'Incline bench press';
+
+  function weightBox(setNumber: number, exerciseName = bench): HTMLInputElement {
+    const element = screen.getByRole('textbox', {
+      name: fitnessStrings.session.weightLabel(setNumber, exerciseName),
+    });
+    if (!(element instanceof HTMLInputElement)) {
+      throw new Error('The weight field is not an input');
+    }
+    return element;
+  }
+
+  function repsBox(setNumber: number, exerciseName = bench): HTMLInputElement {
+    const element = screen.getByRole('textbox', {
+      name: fitnessStrings.session.repsLabel(setNumber, exerciseName),
+    });
+    if (!(element instanceof HTMLInputElement)) {
+      throw new Error('The reps field is not an input');
+    }
+    return element;
+  }
+
+  function logButton(setNumber: number, exerciseName = bench) {
+    return screen.getByRole('button', {
+      name: fitnessStrings.session.logLabel(setNumber, exerciseName),
+    });
+  }
+
+  function section(exerciseName: string): HTMLElement {
+    return screen.getByRole('region', { name: new RegExp(exerciseName) });
+  }
+
+  it('shows the workout name with the block', () => {
+    render(<WorkoutSessionScreen session={freshSession()} />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: fitnessStrings.session.heading('Day 1', 2) }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('link', { name: fitnessStrings.navigation.toBlock }).getAttribute('href'),
+    ).toBe('/fitness-tracker/active/block');
+  });
+
+  describe('the sets', () => {
+    it('FR-017: lists the exercises in slot order, one row per planned set with its target', () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      const bench = section('Incline bench press');
+      expect(within(bench).getAllByText(fitnessStrings.session.target(12))).toHaveLength(2);
+      expect(within(bench).getByText(fitnessStrings.session.target(10))).toBeDefined();
+      expect(within(section('Curl')).getByText(fitnessStrings.session.target(12))).toBeDefined();
+    });
+
+    it('US1 scenario 2: prefills the weight from the last weight and the reps from the target', () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      expect(weightBox(1).value).toBe('65');
+      expect(weightBox(2).value).toBe('62.5');
+      expect(repsBox(1).value).toBe('12');
+      expect(repsBox(3).value).toBe('10');
+    });
+
+    it('US1 scenario 5: leaves the weight empty for an exercise with no history', () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      expect(weightBox(3).value).toBe('');
+    });
+
+    it('FR-010: opens a decimal keypad for the weight and a numeric one for the reps', () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      expect(weightBox(1).getAttribute('inputmode')).toBe('decimal');
+      expect(repsBox(1).getAttribute('inputmode')).toBe('numeric');
+    });
+
+    it('FR-024: marks an optional exercise with a tag and a muted style, and no other', () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      expect(within(section('Curl')).getByText(fitnessStrings.common.optional)).toBeDefined();
+      expect(
+        within(section('Incline bench press')).queryByText(fitnessStrings.common.optional),
+      ).toBeNull();
+      expect(section('Curl').className).toMatch(/optional/);
+      expect(section('Incline bench press').className).not.toMatch(/optional/);
+    });
+
+    it('says there is nothing to log when the workout has no exercises', () => {
+      render(<WorkoutSessionScreen session={freshSession({ slots: [] })} />);
+
+      expect(screen.getByText(fitnessStrings.session.nothingToLog)).toBeDefined();
+    });
+  });
+
+  describe('logging a set', () => {
+    it('US1 scenario 3, FR-005: one tap sends the prefilled values as they are', async () => {
+      const session = freshSession();
+      render(<WorkoutSessionScreen session={session} />);
+
+      fireEvent.click(logButton(1));
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/fitness/sessions/${session.id}/sets`);
+      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+        JSON.stringify({ plannedSetId: 'p1', reps: 12, weightKg: 65 }),
+      );
+    });
+
+    it('US1 scenario 4: sends a changed weight, accepting a comma', async () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.change(weightBox(1), { target: { value: '67,5' } });
+      fireEvent.click(logButton(1));
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+        JSON.stringify({ plannedSetId: 'p1', reps: 12, weightKg: 67.5 }),
+      );
+    });
+
+    it('FR-018: sends no weight when the weight is left empty', async () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.click(logButton(3));
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+        JSON.stringify({ plannedSetId: 'p3', reps: 10, weightKg: null }),
+      );
+    });
+
+    it('sends changed reps', async () => {
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.change(repsBox(2), { target: { value: '9' } });
+      fireEvent.click(logButton(2));
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+        JSON.stringify({ plannedSetId: 'p2', reps: 9, weightKg: 62.5 }),
+      );
+    });
+
+    it.each([['abc'], ['61.255'], ['0'], ['-3']])(
+      'FR-039: refuses a weight of %j without a request',
+      (text) => {
+        render(<WorkoutSessionScreen session={freshSession()} />);
+
+        fireEvent.change(weightBox(1), { target: { value: text } });
+        fireEvent.click(logButton(1));
+
+        expect(screen.getByRole('alert').textContent).toBe(fitnessErrorStrings['invalid-weight']);
+        expect(fetchMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([[''], ['0'], ['1000'], ['x']])(
+      'FR-039: refuses reps of %j without a request',
+      (text) => {
+        render(<WorkoutSessionScreen session={freshSession()} />);
+
+        fireEvent.change(repsBox(1), { target: { value: text } });
+        fireEvent.click(logButton(1));
+
+        expect(screen.getByRole('alert').textContent).toBe(fitnessErrorStrings['invalid-reps']);
+        expect(fetchMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it('edge case: shows the message and refreshes when the set was already logged elsewhere', async () => {
+      fetchMock.mockResolvedValue(Response.json({ error: 'set-already-logged' }, { status: 409 }));
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.click(logButton(1));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toBe(
+          fitnessErrorStrings['set-already-logged'],
+        ),
+      );
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('a logged set', () => {
+    it('FR-019: shows the logged values as text with a mark, and no inputs or button', () => {
+      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+
+      expect(screen.getByText(fitnessStrings.session.loggedLabel(1))).toBeDefined();
+      expect(screen.getByText(fitnessStrings.session.loggedValues(12, '65'))).toBeDefined();
+      expect(
+        screen.queryByRole('textbox', { name: fitnessStrings.session.weightLabel(1, bench) }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: fitnessStrings.session.logLabel(1, bench) }),
+      ).toBeNull();
+    });
+
+    it('FR-020: leaves the other sets open so they can be logged in any order', () => {
+      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+
+      expect(logButton(2)).toBeDefined();
+      expect(logButton(3)).toBeDefined();
+    });
+
+    it('shows a set logged without a weight as reps only', () => {
+      const session = freshSession();
+      render(
+        <WorkoutSessionScreen
+          session={{
+            ...session,
+            slots: session.slots.map((slot) =>
+              slot.id === 's1'
+                ? { ...slot, loggedSets: [loggedSet({ reps: 8, weightKg: null })] }
+                : slot,
+            ),
+          }}
+        />,
+      );
+
+      expect(screen.getByText(fitnessStrings.session.loggedValues(8, null))).toBeDefined();
+    });
+
+    it('formats the logged weight without trailing zeros', () => {
+      const session = freshSession();
+      render(
+        <WorkoutSessionScreen
+          session={{
+            ...session,
+            slots: session.slots.map((slot) =>
+              slot.id === 's1'
+                ? { ...slot, loggedSets: [loggedSet({ reps: 10, weightKg: 62.5 })] }
+                : slot,
+            ),
+          }}
+        />,
+      );
+
+      expect(screen.getByText(fitnessStrings.session.loggedValues(10, '62.5'))).toBeDefined();
+    });
+  });
+
+  describe('typed values', () => {
+    it('US1 scenario 8, FR-021: survive leaving the view and opening it again', () => {
+      const session = freshSession();
+      const first = render(<WorkoutSessionScreen session={session} />);
+      fireEvent.change(weightBox(2), { target: { value: '70' } });
+      fireEvent.change(repsBox(2), { target: { value: '8' } });
+      first.unmount();
+
+      render(<WorkoutSessionScreen session={session} />);
+
+      expect(weightBox(2).value).toBe('70');
+      expect(repsBox(2).value).toBe('8');
+      expect(weightBox(1).value).toBe('65');
+    });
+
+    it('drops the typed values of a set once it is logged', async () => {
+      const session = freshSession();
+      const first = render(<WorkoutSessionScreen session={session} />);
+      fireEvent.change(weightBox(1), { target: { value: '70' } });
+      fireEvent.click(logButton(1));
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      first.unmount();
+
+      render(<WorkoutSessionScreen session={session} />);
+
+      expect(weightBox(1).value).toBe('65');
+    });
+  });
+
+  describe('finishing', () => {
+    function finishButton() {
+      return screen.getByRole('button', { name: fitnessStrings.session.finishWorkout });
+    }
+
+    it('FR-022: finishes at once, with no dialog, when a set is logged', async () => {
+      fetchMock.mockResolvedValue(Response.json({ progression: 'none', completedBlockNumber: 2 }));
+      const session = withFirstSetLogged(freshSession());
+      render(<WorkoutSessionScreen session={session} />);
+
+      fireEvent.click(finishButton());
+
+      await waitFor(() =>
+        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block'),
+      );
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/fitness/sessions/${session.id}/finish`);
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+    });
+
+    it('FR-022: asks first when no set is logged, and sends nothing until confirmed', async () => {
+      fetchMock.mockResolvedValue(Response.json({ progression: 'none', completedBlockNumber: 2 }));
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.click(finishButton());
+      expect(screen.getByText(fitnessStrings.session.finishEmptyConfirm)).toBeDefined();
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', { name: fitnessStrings.session.finishEmptyConfirmLabel }),
+      );
+
+      await waitFor(() =>
+        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block'),
+      );
+    });
+
+    it('US1 scenario 7: goes to the block view with the completed block when it advanced', async () => {
+      fetchMock.mockResolvedValue(
+        Response.json({ progression: 'block-advanced', completedBlockNumber: 2 }),
+      );
+      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+
+      fireEvent.click(finishButton());
+
+      await waitFor(() =>
+        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block?completed=2'),
+      );
+    });
+
+    it('US1 scenario 7: does the same when the program starts again', async () => {
+      fetchMock.mockResolvedValue(
+        Response.json({ progression: 'new-pass', completedBlockNumber: 4 }),
+      );
+      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+
+      fireEvent.click(finishButton());
+
+      await waitFor(() =>
+        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block?completed=4'),
+      );
+    });
+
+    it('forgets the typed values of the session when it is finished', async () => {
+      fetchMock.mockResolvedValue(Response.json({ progression: 'none', completedBlockNumber: 2 }));
+      const session = withFirstSetLogged(freshSession());
+      render(<WorkoutSessionScreen session={session} />);
+      fireEvent.change(weightBox(2), { target: { value: '70' } });
+      expect(window.localStorage.getItem(`fitness:session:${session.id}`)).not.toBeNull();
+
+      fireEvent.click(finishButton());
+
+      await waitFor(() => expect(router.push).toHaveBeenCalledTimes(1));
+      expect(window.localStorage.getItem(`fitness:session:${session.id}`)).toBeNull();
+    });
+
+    it('edge case: shows the message when the workout is already finished elsewhere', async () => {
+      fetchMock.mockResolvedValue(
+        Response.json({ error: 'session-not-in-progress' }, { status: 409 }),
+      );
+      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+
+      fireEvent.click(finishButton());
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toBe(
+          fitnessErrorStrings['session-not-in-progress'],
+        ),
+      );
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+    });
+  });
+});

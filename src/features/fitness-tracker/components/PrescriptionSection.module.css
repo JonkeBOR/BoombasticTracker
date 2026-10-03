@@ -1,0 +1,83 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.sets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.set {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.number {
+  min-width: 3.5rem;
+  font-weight: 600;
+}
+
+.reps {
+  width: 4.5rem;
+  min-height: var(--tap-target-min);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.lastWeight {
+  margin-inline-start: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.quickFill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.quickFillTitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.quickFillFields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

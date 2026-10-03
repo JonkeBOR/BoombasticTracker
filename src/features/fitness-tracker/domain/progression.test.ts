@@ -1,57 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  decideActivation,
+  blockStatuses,
   decideAfterFinish,
-  decideStartOver,
+  decideSkip,
   isBlockComplete,
   reevaluateAfterEdit,
 } from './progression';
 
-describe('decideActivation', () => {
-  it('rules 1 to 3: switching programs ends the previous active cycle and starts cycle 1', () => {
-    expect(
-      decideActivation({
-        isAlreadyActive: false,
-        previousActiveCycleId: 'c-old',
-        targetActiveCycleId: null,
-        targetLastCycleNumber: 0,
-      }),
-    ).toEqual({ setActiveProgram: true, endCycleId: 'c-old', startCycleNumber: 1 });
-  });
-
-  it('numbers a new cycle after the program last one', () => {
-    expect(
-      decideActivation({
-        isAlreadyActive: false,
-        previousActiveCycleId: null,
-        targetActiveCycleId: null,
-        targetLastCycleNumber: 4,
-      }),
-    ).toEqual({ setActiveProgram: true, endCycleId: null, startCycleNumber: 5 });
-  });
-
-  it('keeps the active cycle of the program being activated', () => {
-    expect(
-      decideActivation({
-        isAlreadyActive: false,
-        previousActiveCycleId: 'c-old',
-        targetActiveCycleId: 'c-target',
-        targetLastCycleNumber: 3,
-      }),
-    ).toEqual({ setActiveProgram: true, endCycleId: 'c-old', startCycleNumber: null });
-  });
-
-  it('changes nothing when the program is already active', () => {
-    expect(
-      decideActivation({
-        isAlreadyActive: true,
-        previousActiveCycleId: 'c1',
-        targetActiveCycleId: 'c1',
-        targetLastCycleNumber: 1,
-      }),
-    ).toEqual({ setActiveProgram: false, endCycleId: null, startCycleNumber: null });
-  });
-});
+const blockIds = ['b1', 'b2', 'b3'];
+const workoutIds = ['w1', 'w2'];
 
 describe('isBlockComplete', () => {
   it('rule 6: is complete when every workout has a finished session', () => {
@@ -70,105 +27,260 @@ describe('isBlockComplete', () => {
 });
 
 describe('decideAfterFinish', () => {
-  const workoutIds = ['w1', 'w2'];
-
   it('rule 7: does nothing while the block is incomplete', () => {
     expect(
       decideAfterFinish({
-        cycle: { number: 1, currentBlockNumber: 2 },
-        blockCount: 3,
+        blockIds,
+        currentBlockId: 'b2',
         workoutIds,
         finishedWorkoutIdsInBlock: ['w1'],
       }),
     ).toEqual({ kind: 'none' });
   });
 
-  it('rule 7: advances to the next block when the current block completes', () => {
+  it('rule 7, FR-045: advances to the next block by order when the current block completes', () => {
     expect(
       decideAfterFinish({
-        cycle: { number: 1, currentBlockNumber: 2 },
-        blockCount: 3,
+        blockIds,
+        currentBlockId: 'b2',
         workoutIds,
         finishedWorkoutIdsInBlock: ['w1', 'w2'],
       }),
-    ).toEqual({ kind: 'advance', toBlockNumber: 3 });
+    ).toEqual({ kind: 'advance', toBlockId: 'b3' });
   });
 
-  it('rule 7: completes the cycle and names the next one when the last block completes', () => {
+  it('rule 7, FR-045: starts a new pass when the last block completes', () => {
     expect(
       decideAfterFinish({
-        cycle: { number: 4, currentBlockNumber: 3 },
-        blockCount: 3,
+        blockIds,
+        currentBlockId: 'b3',
         workoutIds,
         finishedWorkoutIdsInBlock: ['w1', 'w2'],
       }),
-    ).toEqual({ kind: 'complete', newCycleNumber: 5 });
+    ).toEqual({ kind: 'new-pass' });
+  });
+
+  it('does nothing for a program with no workouts', () => {
+    expect(
+      decideAfterFinish({
+        blockIds,
+        currentBlockId: 'b1',
+        workoutIds: [],
+        finishedWorkoutIdsInBlock: [],
+      }),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it('does nothing when the current block is not one of the blocks', () => {
+    expect(
+      decideAfterFinish({
+        blockIds,
+        currentBlockId: 'gone',
+        workoutIds,
+        finishedWorkoutIdsInBlock: ['w1', 'w2'],
+      }),
+    ).toEqual({ kind: 'none' });
   });
 });
 
-describe('decideStartOver', () => {
-  it('rule 8: names the cycle that follows the one being ended', () => {
-    expect(decideStartOver({ number: 2, currentBlockNumber: 3 })).toEqual({
-      newCycleNumber: 3,
+describe('decideSkip', () => {
+  it('FR-040: moves to a later block', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b1', targetBlockId: 'b3' })).toEqual({
+      ok: true,
+      value: { kind: 'move', toBlockId: 'b3' },
+    });
+    expect(decideSkip({ blockIds, currentBlockId: 'b1', targetBlockId: 'b2' })).toEqual({
+      ok: true,
+      value: { kind: 'move', toBlockId: 'b2' },
+    });
+  });
+
+  it('rule 8, FR-040: skipping to the first block starts a new pass', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b3', targetBlockId: 'b1' })).toEqual({
+      ok: true,
+      value: { kind: 'new-pass' },
+    });
+  });
+
+  it('FR-040: skipping to the first block while on it also starts a new pass', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b1', targetBlockId: 'b1' })).toEqual({
+      ok: true,
+      value: { kind: 'new-pass' },
+    });
+  });
+
+  it('FR-040: refuses the current block unless it is the first', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b2', targetBlockId: 'b2' })).toEqual({
+      ok: false,
+      error: 'invalid-block',
+    });
+  });
+
+  it('FR-040: refuses an earlier block other than the first', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b3', targetBlockId: 'b2' })).toEqual({
+      ok: false,
+      error: 'invalid-block',
+    });
+  });
+
+  it('FR-040: refuses a block that is not in the program', () => {
+    expect(decideSkip({ blockIds, currentBlockId: 'b1', targetBlockId: 'other' })).toEqual({
+      ok: false,
+      error: 'invalid-block',
     });
   });
 });
 
 describe('reevaluateAfterEdit', () => {
-  const workoutIds = ['w1', 'w2'];
+  const without = (id: string) => blockIds.filter((blockId) => blockId !== id);
 
-  it('changes nothing when the block is still incomplete and still exists', () => {
+  it('FR-043: removing a block before the current one keeps the current block', () => {
     expect(
       reevaluateAfterEdit({
-        cycle: { number: 1, currentBlockNumber: 2 },
-        blockCount: 3,
+        blockIdsBefore: blockIds,
+        blockIdsAfter: without('b1'),
+        currentBlockId: 'b2',
+        removedBlockId: 'b1',
         workoutIds,
-        finishedWorkoutIdsInBlock: ['w1'],
+        finishedWorkoutIdsInCurrentBlock: [],
       }),
     ).toEqual({ kind: 'none' });
   });
 
-  it('advances when removing a workout leaves only finished ones', () => {
+  it('FR-043: removing the current block moves to the block that followed it', () => {
     expect(
       reevaluateAfterEdit({
-        cycle: { number: 1, currentBlockNumber: 1 },
-        blockCount: 3,
-        workoutIds: ['w1'],
-        finishedWorkoutIdsInBlock: ['w1'],
-      }),
-    ).toEqual({ kind: 'move', toBlockNumber: 2 });
-  });
-
-  it('completes the cycle when the last block becomes complete', () => {
-    expect(
-      reevaluateAfterEdit({
-        cycle: { number: 1, currentBlockNumber: 3 },
-        blockCount: 3,
-        workoutIds: ['w1'],
-        finishedWorkoutIdsInBlock: ['w1'],
-      }),
-    ).toEqual({ kind: 'complete', newCycleNumber: 2 });
-  });
-
-  it('moves to the new last block when the current block no longer exists', () => {
-    expect(
-      reevaluateAfterEdit({
-        cycle: { number: 1, currentBlockNumber: 4 },
-        blockCount: 2,
+        blockIdsBefore: blockIds,
+        blockIdsAfter: without('b2'),
+        currentBlockId: 'b2',
+        removedBlockId: 'b2',
         workoutIds,
-        finishedWorkoutIdsInBlock: [],
+        finishedWorkoutIdsInCurrentBlock: ['w1', 'w2'],
       }),
-    ).toEqual({ kind: 'move', toBlockNumber: 2 });
+    ).toEqual({ kind: 'move', toBlockId: 'b3' });
   });
 
-  it('stays incomplete when a workout is added after the others finished', () => {
+  it('FR-043: removing the current block when it is the last starts a new pass', () => {
     expect(
       reevaluateAfterEdit({
-        cycle: { number: 1, currentBlockNumber: 2 },
-        blockCount: 3,
-        workoutIds: ['w1', 'w2', 'w3'],
-        finishedWorkoutIdsInBlock: ['w1', 'w2'],
+        blockIdsBefore: blockIds,
+        blockIdsAfter: without('b3'),
+        currentBlockId: 'b3',
+        removedBlockId: 'b3',
+        workoutIds,
+        finishedWorkoutIdsInCurrentBlock: [],
+      }),
+    ).toEqual({ kind: 'new-pass' });
+  });
+
+  it('FR-043: removing a block after the current one changes nothing', () => {
+    expect(
+      reevaluateAfterEdit({
+        blockIdsBefore: blockIds,
+        blockIdsAfter: without('b3'),
+        currentBlockId: 'b1',
+        removedBlockId: 'b3',
+        workoutIds,
+        finishedWorkoutIdsInCurrentBlock: ['w1', 'w2'],
       }),
     ).toEqual({ kind: 'none' });
+  });
+
+  it('FR-042: removing a workout that leaves only finished ones moves to the next block', () => {
+    expect(
+      reevaluateAfterEdit({
+        blockIdsBefore: blockIds,
+        blockIdsAfter: blockIds,
+        currentBlockId: 'b1',
+        removedBlockId: null,
+        workoutIds: ['w1'],
+        finishedWorkoutIdsInCurrentBlock: ['w1'],
+      }),
+    ).toEqual({ kind: 'move', toBlockId: 'b2' });
+  });
+
+  it('FR-042: removing a workout that completes the last block starts a new pass', () => {
+    expect(
+      reevaluateAfterEdit({
+        blockIdsBefore: blockIds,
+        blockIdsAfter: blockIds,
+        currentBlockId: 'b3',
+        removedBlockId: null,
+        workoutIds: ['w1'],
+        finishedWorkoutIdsInCurrentBlock: ['w1'],
+      }),
+    ).toEqual({ kind: 'new-pass' });
+  });
+
+  it('FR-042: removing a workout that leaves unfinished ones changes nothing', () => {
+    expect(
+      reevaluateAfterEdit({
+        blockIdsBefore: blockIds,
+        blockIdsAfter: blockIds,
+        currentBlockId: 'b2',
+        removedBlockId: null,
+        workoutIds: ['w1', 'w2'],
+        finishedWorkoutIdsInCurrentBlock: ['w1'],
+      }),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it('never completes a block when the program has no workouts left', () => {
+    expect(
+      reevaluateAfterEdit({
+        blockIdsBefore: blockIds,
+        blockIdsAfter: blockIds,
+        currentBlockId: 'b1',
+        removedBlockId: null,
+        workoutIds: [],
+        finishedWorkoutIdsInCurrentBlock: [],
+      }),
+    ).toEqual({ kind: 'none' });
+  });
+});
+
+describe('blockStatuses', () => {
+  it('FR-011: marks the current block, upcoming blocks and complete or skipped earlier blocks', () => {
+    expect(
+      blockStatuses({
+        blockIds: ['b1', 'b2', 'b3', 'b4'],
+        currentBlockId: 'b3',
+        workoutIds,
+        finishedWorkoutIdsByBlock: { b1: ['w1', 'w2'], b2: ['w1'], b3: ['w1'] },
+      }),
+    ).toEqual([
+      { blockId: 'b1', status: 'complete', finishedCount: 2 },
+      { blockId: 'b2', status: 'skipped', finishedCount: 1 },
+      { blockId: 'b3', status: 'current', finishedCount: 1 },
+      { blockId: 'b4', status: 'upcoming', finishedCount: 0 },
+    ]);
+  });
+
+  it('counts only workouts the program still has', () => {
+    expect(
+      blockStatuses({
+        blockIds: ['b1', 'b2'],
+        currentBlockId: 'b2',
+        workoutIds: ['w1'],
+        finishedWorkoutIdsByBlock: { b1: ['w1', 'removed'] },
+      }),
+    ).toEqual([
+      { blockId: 'b1', status: 'complete', finishedCount: 1 },
+      { blockId: 'b2', status: 'current', finishedCount: 0 },
+    ]);
+  });
+
+  it('marks an earlier block with no finished workouts as skipped', () => {
+    expect(
+      blockStatuses({
+        blockIds: ['b1', 'b2'],
+        currentBlockId: 'b2',
+        workoutIds,
+        finishedWorkoutIdsByBlock: {},
+      }),
+    ).toEqual([
+      { blockId: 'b1', status: 'skipped', finishedCount: 0 },
+      { blockId: 'b2', status: 'current', finishedCount: 0 },
+    ]);
   });
 });

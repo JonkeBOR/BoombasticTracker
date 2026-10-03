@@ -53,14 +53,7 @@ export function toExercise(row: ExerciseRow): Exercise {
 }
 
 export function toCycle(row: CycleRow): Cycle {
-  return {
-    id: row.id,
-    number: row.number,
-    status: row.status,
-    currentBlockNumber: row.currentBlockNumber,
-    startedAt: row.startedAt,
-    endedAt: row.endedAt,
-  };
+  return { id: row.id, currentBlockId: row.currentBlockId, pass: row.pass };
 }
 
 export function toSetLog(row: SetLogRow): SetLog {
@@ -74,7 +67,7 @@ export function toSetLog(row: SetLogRow): SetLog {
     context: {
       programId: row.programId,
       cycleId: row.cycleId,
-      cycleNumber: row.cycleNumber,
+      pass: row.pass,
       trainingBlockId: row.trainingBlockId,
       blockNumber: row.blockNumber,
       workoutId: row.workoutId,
@@ -99,7 +92,10 @@ function toPlannedSetView(row: PlannedSetRow): PlannedSetView {
 
 export function toProgram(rows: ProgramRows): Program {
   const blocks = byPosition(rows.blocks);
-  const activeCycle = rows.cycles.find((cycle) => cycle.status === 'active');
+  const [cycle] = rows.cycles;
+  if (!cycle) {
+    throw new Error(`The program ${rows.program.id} has no cycle`);
+  }
   return {
     id: rows.program.id,
     name: rows.program.name,
@@ -121,6 +117,6 @@ export function toProgram(rows: ProgramRows): Program {
         })),
       })),
     })),
-    activeCycle: activeCycle ? toCycle(activeCycle) : null,
+    cycle: toCycle(cycle),
   };
 }

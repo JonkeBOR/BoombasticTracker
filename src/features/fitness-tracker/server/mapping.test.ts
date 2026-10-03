@@ -24,7 +24,7 @@ const setLogRow = {
   workoutId: 'w1',
   exerciseSlotId: 's1',
   workoutSessionId: 'ws1',
-  cycleNumber: 1,
+  pass: 1,
   blockNumber: 2,
 };
 
@@ -42,23 +42,10 @@ describe('toExercise', () => {
 
 describe('toCycle', () => {
   it('maps the cycle row', () => {
-    expect(
-      toCycle({
-        id: 'c1',
-        programId: 'pr',
-        number: 2,
-        status: 'active',
-        currentBlockNumber: 3,
-        startedAt: at,
-        endedAt: null,
-      }),
-    ).toEqual({
+    expect(toCycle({ id: 'c1', programId: 'pr', currentBlockId: 'b2', pass: 3 })).toEqual({
       id: 'c1',
-      number: 2,
-      status: 'active',
-      currentBlockNumber: 3,
-      startedAt: at,
-      endedAt: null,
+      currentBlockId: 'b2',
+      pass: 3,
     });
   });
 });
@@ -70,7 +57,7 @@ describe('toSetLog', () => {
     expect(setLog.context).toEqual({
       programId: 'pr',
       cycleId: 'c1',
-      cycleNumber: 1,
+      pass: 1,
       trainingBlockId: 'b1',
       blockNumber: 2,
       workoutId: 'w1',
@@ -169,26 +156,7 @@ describe('toProgram', () => {
         ],
       },
     ],
-    cycles: [
-      {
-        id: 'c1',
-        programId: 'pr',
-        number: 1,
-        status: 'completed',
-        currentBlockNumber: 2,
-        startedAt: at,
-        endedAt: at,
-      },
-      {
-        id: 'c2',
-        programId: 'pr',
-        number: 2,
-        status: 'active',
-        currentBlockNumber: 1,
-        startedAt: at,
-        endedAt: null,
-      },
-    ],
+    cycles: [{ id: 'c1', programId: 'pr', currentBlockId: 'b1', pass: 2 }],
   };
 
   it('orders blocks, workouts and slots by position', () => {
@@ -216,10 +184,13 @@ describe('toProgram', () => {
     expect(slot?.prescriptions.map((prescription) => prescription.plannedSets)).toEqual([[], []]);
   });
 
-  it('reports the active cycle and the active flag', () => {
+  it('reports the cycle and the active flag', () => {
     const program = toProgram(rows);
     expect(program.isActive).toBe(true);
-    expect(program.activeCycle?.id).toBe('c2');
-    expect(toProgram({ ...rows, cycles: [] }).activeCycle).toBeNull();
+    expect(program.cycle).toEqual({ id: 'c1', currentBlockId: 'b1', pass: 2 });
+  });
+
+  it('refuses a program that has no cycle, because every program has one', () => {
+    expect(() => toProgram({ ...rows, cycles: [] })).toThrow('no cycle');
   });
 });

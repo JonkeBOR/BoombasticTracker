@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatKg,
+  formatShortDate,
   gramsToKg,
   localDate,
+  parseKgInput,
   parseLoggedReps,
   parseName,
   parseTargetReps,
   parseWeightKg,
+  resolveTimeZone,
 } from './values';
 
 describe('parseWeightKg', () => {
@@ -91,5 +95,70 @@ describe('localDate', () => {
       ok: false,
       error: 'invalid-time-zone',
     });
+  });
+});
+
+describe('parseKgInput', () => {
+  it('FR-009: accepts a point or a comma as the decimal separator', () => {
+    expect(parseKgInput('61.25')).toEqual({ ok: true, value: 61.25 });
+    expect(parseKgInput('61,25')).toEqual({ ok: true, value: 61.25 });
+    expect(parseKgInput(' 67,5 ')).toEqual({ ok: true, value: 67.5 });
+    expect(parseKgInput('80')).toEqual({ ok: true, value: 80 });
+    expect(parseKgInput('.5')).toEqual({ ok: true, value: 0.5 });
+  });
+
+  it('treats empty input as no weight', () => {
+    expect(parseKgInput('')).toEqual({ ok: true, value: null });
+    expect(parseKgInput('   ')).toEqual({ ok: true, value: null });
+  });
+
+  it('FR-039: rejects more than two decimals, letters, signs and zero', () => {
+    for (const text of ['61.255', '12,345', 'abc', '-5', '+5', '1e3', '5.', '1.2.3', '0', '0,00']) {
+      expect(parseKgInput(text)).toEqual({ ok: false, error: 'invalid-weight' });
+    }
+  });
+
+  it('rejects a weight the domain would refuse', () => {
+    expect(parseKgInput('1000.01')).toEqual({ ok: false, error: 'invalid-weight' });
+  });
+});
+
+describe('formatKg', () => {
+  it('FR-009: shows at most two decimals and no trailing zeros', () => {
+    expect(formatKg(62.5)).toBe('62.5');
+    expect(formatKg(60)).toBe('60');
+    expect(formatKg(61.25)).toBe('61.25');
+    expect(formatKg(0.1 + 0.2)).toBe('0.3');
+    expect(formatKg(74.2)).toBe('74.2');
+  });
+});
+
+describe('resolveTimeZone', () => {
+  it('R10: keeps a valid IANA time zone', () => {
+    expect(resolveTimeZone('Europe/Stockholm')).toBe('Europe/Stockholm');
+  });
+
+  it('R10: decodes a percent-encoded time zone', () => {
+    expect(resolveTimeZone('Europe%2FStockholm')).toBe('Europe/Stockholm');
+  });
+
+  it('R10: falls back to UTC when the value is missing, unknown or malformed', () => {
+    expect(resolveTimeZone(undefined)).toBe('UTC');
+    expect(resolveTimeZone('')).toBe('UTC');
+    expect(resolveTimeZone('Mars/Olympus')).toBe('UTC');
+    expect(resolveTimeZone('%E0%A4%A')).toBe('UTC');
+  });
+});
+
+describe('formatShortDate', () => {
+  const lateEvening = new Date('2026-10-01T22:30:00Z');
+
+  it('FR-013: shows the day and month in the given time zone', () => {
+    expect(formatShortDate(lateEvening, 'UTC')).toBe('1 Oct');
+    expect(formatShortDate(lateEvening, 'Europe/Stockholm')).toBe('2 Oct');
+  });
+
+  it('falls back to UTC for an unknown time zone', () => {
+    expect(formatShortDate(lateEvening, 'Mars/Olympus')).toBe('1 Oct');
   });
 });

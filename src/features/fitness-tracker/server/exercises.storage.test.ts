@@ -1,14 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { activateProgram } from './activation';
 import {
   addExercise,
   archiveExercise,
+  getExerciseUsage,
   listExercises,
   renameExercise,
   unarchiveExercise,
 } from './exercises';
 import { ensureProfile } from './profile';
-import { expectOk } from './storage-test-support';
+import { createProgramFromSpec, expectOk } from './storage-test-support';
 import { openTestDatabase, type TestDatabase } from './storage-test-database';
+import { logSet, startWorkout } from './training';
 
 describe('exercise catalog', () => {
   let testDatabase: TestDatabase;
@@ -102,5 +105,146 @@ describe('exercise catalog', () => {
     expect(
       (await listExercises(db, profileId, { includeArchived: false })).map((item) => item.name),
     ).toEqual(['Bench', 'deadlift', 'squat']);
+  });
+});
+
+describe('exercise usage', () => {
+  let testDatabase: TestDatabase;
+  let profileId: string;
+  const now = new Date('2026-10-03T10:00:00Z');
+
+  beforeAll(async () => {
+    testDatabase = await openTestDatabase();
+  });
+
+  afterAll(async () => {
+    await testDatabase.dispose();
+  });
+
+  beforeEach(async () => {
+    profileId = (await ensureProfile(testDatabase.db, crypto.randomUUID(), now)).id;
+  });
+
+  it('US5 scenario 5, FR-036: lists the programs and workouts that use the exercise', async () => {
+    const { db } = testDatabase;
+    await createProgramFromSpec(
+      db,
+      profileId,
+      {
+        name: 'Strength',
+        blockCount: 2,
+        workouts: [
+          { name: 'Upper', slots: [{ exercise: 'Press', targetReps: [5] }] },
+          { name: 'Lower', slots: [{ exercise: 'Squat', targetReps: [5] }] },
+        ],
+      },
+      now,
+    );
+    await createProgramFromSpec(
+      db,
+      profileId,
+      {
+        name: 'Cut',
+        blockCount: 1,
+        workouts: [{ name: 'Full body', slots: [{ exercise: 'Press', targetReps: [8] }] }],
+      },
+      new Date(now.getTime() + 1000),
+    );
+    const press = (await listExercises(db, profileId, { includeArchived: false })).find(
+      (exercise) => exercise.name === 'Press',
+    );
+
+    const usage = expectOk(await getExerciseUsage(db, profileId, press?.id ?? ''));
+
+    expect(usage.exercise).toEqual(press);
+    expect(usage.slots.map((slot) => [slot.programName, slot.workoutName])).toEqual([
+      ['Cut', 'Full body'],
+      ['Strength', 'Upper'],
+    ]);
+    expect(usage.slots.every((slot) => slot.programId !== '' && slot.workoutId !== '')).toBe(true);
+    expect(usage.hasSetLogs).toBe(false);
+  });
+
+  it('lists a workout once even when it holds the exercise twice', async () => {
+    const { db } = testDatabase;
+    await createProgramFromSpec(
+      db,
+      profileId,
+      {
+        blockCount: 1,
+        workouts: [
+          {
+            name: 'Day',
+            slots: [
+              { exercise: 'Curl', targetReps: [10] },
+              { exercise: 'Curl', targetReps: [12] },
+            ],
+          },
+        ],
+      },
+      now,
+    );
+    const curl = (await listExercises(db, profileId, { includeArchived: false }))[0];
+
+    const usage = expectOk(await getExerciseUsage(db, profileId, curl?.id ?? ''));
+
+    expect(usage.slots).toHaveLength(1);
+  });
+
+  it('FR-036: reports that the exercise has set logs once a set is logged', async () => {
+    const { db } = testDatabase;
+    const program = await createProgramFromSpec(
+      db,
+      profileId,
+      {
+        blockCount: 1,
+        workouts: [{ name: 'Day', slots: [{ exercise: 'Row', targetReps: [10] }] }],
+      },
+      now,
+    );
+    expectOk(await activateProgram(db, profileId, program.id, now));
+    const session = expectOk(await startWorkout(db, profileId, program.workouts[0]?.id ?? '', now));
+    expectOk(
+      await logSet(
+        db,
+        profileId,
+        session.id,
+        session.slots[0]?.plannedSets[0]?.id ?? '',
+        { reps: 10, weightKg: 50 },
+        now,
+      ),
+    );
+
+    const usage = expectOk(
+      await getExerciseUsage(db, profileId, program.workouts[0]?.slots[0]?.exercise.id ?? ''),
+    );
+
+    expect(usage.hasSetLogs).toBe(true);
+  });
+
+  it('FR-036: an unused exercise has no slots and no set logs', async () => {
+    const { db } = testDatabase;
+    const exercise = expectOk(await addExercise(db, profileId, { name: 'Dips' }, now));
+
+    expect(expectOk(await getExerciseUsage(db, profileId, exercise.id))).toEqual({
+      exercise,
+      slots: [],
+      hasSetLogs: false,
+    });
+  });
+
+  it('answers not-found for an exercise of another profile or one that does not exist', async () => {
+    const { db } = testDatabase;
+    const exercise = expectOk(await addExercise(db, profileId, { name: 'Dips' }, now));
+    const otherProfileId = (await ensureProfile(db, crypto.randomUUID(), now)).id;
+
+    expect(await getExerciseUsage(db, otherProfileId, exercise.id)).toEqual({
+      ok: false,
+      error: 'not-found',
+    });
+    expect(await getExerciseUsage(db, profileId, crypto.randomUUID())).toEqual({
+      ok: false,
+      error: 'not-found',
+    });
   });
 });

@@ -1,7 +1,7 @@
 import type { SetLog } from './types';
 
-export type CycleBlockSummary = {
-  cycleNumber: number;
+export type PassBlockSummary = {
+  pass: number;
   setLogs: SetLog[];
   sets: number;
   totalReps: number;
@@ -11,16 +11,16 @@ export type CycleBlockSummary = {
 export type BlockHistory = {
   trainingBlockId: string;
   blockNumber: number;
-  cycles: CycleBlockSummary[];
+  passes: PassBlockSummary[];
 };
 
 function byPerformedAt(left: SetLog, right: SetLog): number {
   return left.performedAt.getTime() - right.performedAt.getTime();
 }
 
-function summarize(cycleNumber: number, setLogs: SetLog[]): CycleBlockSummary {
+function summarize(pass: number, setLogs: SetLog[]): PassBlockSummary {
   return {
-    cycleNumber,
+    pass,
     setLogs,
     sets: setLogs.length,
     totalReps: setLogs.reduce((total, log) => total + log.reps, 0),
@@ -28,26 +28,26 @@ function summarize(cycleNumber: number, setLogs: SetLog[]): CycleBlockSummary {
   };
 }
 
-export function groupByBlockAcrossCycles(setLogs: readonly SetLog[]): BlockHistory[] {
-  const blocks = new Map<string, { blockNumber: number; byCycle: Map<number, SetLog[]> }>();
+export function groupByBlockAcrossPasses(setLogs: readonly SetLog[]): BlockHistory[] {
+  const blocks = new Map<string, { blockNumber: number; byPass: Map<number, SetLog[]> }>();
   for (const log of [...setLogs].sort(byPerformedAt)) {
-    const { trainingBlockId, blockNumber, cycleNumber } = log.context;
+    const { trainingBlockId, blockNumber, pass } = log.context;
     const block = blocks.get(trainingBlockId) ?? {
       blockNumber,
-      byCycle: new Map<number, SetLog[]>(),
+      byPass: new Map<number, SetLog[]>(),
     };
-    const cycleLogs = block.byCycle.get(cycleNumber) ?? [];
-    cycleLogs.push(log);
-    block.byCycle.set(cycleNumber, cycleLogs);
+    const passLogs = block.byPass.get(pass) ?? [];
+    passLogs.push(log);
+    block.byPass.set(pass, passLogs);
     blocks.set(trainingBlockId, block);
   }
   return [...blocks.entries()]
     .map(([trainingBlockId, block]) => ({
       trainingBlockId,
       blockNumber: block.blockNumber,
-      cycles: [...block.byCycle.entries()]
+      passes: [...block.byPass.entries()]
         .sort(([left], [right]) => left - right)
-        .map(([cycleNumber, logs]) => summarize(cycleNumber, logs)),
+        .map(([pass, logs]) => summarize(pass, logs)),
     }))
     .sort((left, right) => left.blockNumber - right.blockNumber);
 }

@@ -9,6 +9,10 @@
   --color-border: #e3e6ec;
   --color-on-accent: #ffffff;
   --color-danger: #b42318;
+  --color-surface-muted: #eef0f4;
+  --color-highlight: #e6efff;
+  --color-highlight-text: #17348a;
+  --color-success: #1a7f4b;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -19,6 +23,7 @@
   --radius-md: 0.75rem;
 
   --tap-target-min: 2.75rem;
+  --sticky-bar-height: 4.5rem;
 
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -43,6 +48,10 @@
     --color-border: #2a2f3a;
     --color-on-accent: #0b1020;
     --color-danger: #ff8f84;
+    --color-surface-muted: #14171e;
+    --color-highlight: #1b2a4d;
+    --color-highlight-text: #cfe0ff;
+    --color-success: #5fd39a;
   }
 }
 

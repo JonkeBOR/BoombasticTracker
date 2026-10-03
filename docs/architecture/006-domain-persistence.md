@@ -125,6 +125,9 @@ to need it.
 
 ## Consequences
 
+- 007 changed the cycle described here: a program now has one cycle for its whole life instead of one
+  per pass, and sessions refer to blocks by identity. See
+  [007-cycle-as-container-and-bff.md](007-cycle-as-container-and-bff.md).
 - A later feature adds its tables to its own `server/schema.ts` and re-exports them where
   `src/lib/server/database.ts` builds the schema. Today that file imports the fitness schema
   directly, which is the point to generalise when a second feature stores data.
