@@ -16,6 +16,7 @@
   --color-metal-shadow: #522b5b;
   --color-metal-base: #854f6c;
   --color-metal-shine: #fbe4d8;
+  --color-focus-ring: #dfb6b2;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -91,4 +92,11 @@ body {
 button,
 a {
   touch-action: manipulation;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
 }
