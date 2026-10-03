@@ -1,12 +1,12 @@
 import { ActivateButton } from '@/features/fitness-tracker/components/ActivateButton';
 import { ActionButton } from '@/features/fitness-tracker/components/ActionButton';
-import { AddNameForm } from '@/features/fitness-tracker/components/AddNameForm';
+import { AddLink } from '@/features/fitness-tracker/components/AddLink';
 import { BlockRow } from '@/features/fitness-tracker/components/BlockRow';
 import { DeleteProgramButton } from '@/features/fitness-tracker/components/DeleteProgramButton';
 import { PauseButton } from '@/features/fitness-tracker/components/PauseButton';
 import { RenameForm } from '@/features/fitness-tracker/components/RenameForm';
 import { Screen } from '@/features/fitness-tracker/components/Screen';
-import { WorkoutRow } from '@/features/fitness-tracker/components/WorkoutRow';
+import { WorkoutList } from '@/features/fitness-tracker/components/WorkoutList';
 import type { BlockView, Program } from '@/features/fitness-tracker/domain/types';
 import Link from 'next/link';
 import { fitnessStrings } from '@/lib/strings/fitness';
@@ -97,35 +97,33 @@ export function ProgramEditScreen({
       </section>
 
       <section className={styles.section}>
-        <h2 id={workoutsHeadingId} className={styles.heading}>
-          {fitnessStrings.programEdit.workoutsTitle}
-        </h2>
+        <div className={styles.headingRow}>
+          <h2 id={workoutsHeadingId} className={styles.heading}>
+            {fitnessStrings.programEdit.workoutsTitle}
+          </h2>
+          <AddLink
+            href={`/fitness-tracker/programs/${program.id}/workouts/new`}
+            label={fitnessStrings.programEdit.addWorkout}
+          />
+        </div>
         {program.workouts.length === 0 ? (
           <p className={styles.empty}>{fitnessStrings.programEdit.noWorkouts}</p>
         ) : (
-          <ul className={styles.list} aria-labelledby={workoutsHeadingId}>
-            {program.workouts.map((workout, index) => (
-              <li key={workout.id}>
-                <WorkoutRow
-                  programId={program.id}
-                  workout={workout}
-                  index={index}
-                  count={program.workouts.length}
-                  removeMessage={workoutRemoveMessage(
-                    program,
-                    workout.name,
-                    inProgressWorkoutIds.includes(workout.id),
-                  )}
-                />
-              </li>
-            ))}
-          </ul>
+          <WorkoutList
+            programId={program.id}
+            workouts={program.workouts.map((workout) => ({
+              id: workout.id,
+              name: workout.name,
+              removeMessage: workoutRemoveMessage(
+                program,
+                workout.name,
+                inProgressWorkoutIds.includes(workout.id),
+              ),
+            }))}
+            className={styles.list}
+            labelledBy={workoutsHeadingId}
+          />
         )}
-        <AddNameForm
-          label={fitnessStrings.programEdit.workoutNameLabel}
-          submitLabel={fitnessStrings.programEdit.addWorkout}
-          url={`/api/fitness/programs/${program.id}/workouts`}
-        />
       </section>
 
       {program.isActive ? null : <DeleteProgramButton programId={program.id} />}

@@ -1,56 +1,63 @@
-import { AddSlotForm } from '@/features/fitness-tracker/components/AddSlotForm';
+import { AddLink } from '@/features/fitness-tracker/components/AddLink';
+import { NewWorkoutForm } from '@/features/fitness-tracker/components/NewWorkoutForm';
 import { RenameForm } from '@/features/fitness-tracker/components/RenameForm';
 import { Screen } from '@/features/fitness-tracker/components/Screen';
-import { SlotRow } from '@/features/fitness-tracker/components/SlotRow';
-import type { Exercise, WorkoutView } from '@/features/fitness-tracker/domain/types';
+import { SlotList } from '@/features/fitness-tracker/components/SlotList';
+import type { WorkoutView } from '@/features/fitness-tracker/domain/types';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import styles from './WorkoutEditScreen.module.css';
 
 type WorkoutEditScreenProps = {
   programId: string;
-  workout: WorkoutView;
-  exercises: readonly Exercise[];
+  workout: WorkoutView | null;
 };
 
 const slotsHeadingId = 'workout-slots-heading';
 
-export function WorkoutEditScreen({ programId, workout, exercises }: WorkoutEditScreenProps) {
+export function WorkoutEditScreen({ programId, workout }: WorkoutEditScreenProps) {
   return (
     <Screen
-      title={workout.name}
+      title={workout?.name ?? fitnessStrings.workoutEdit.newTitle}
       back={{
         href: `/fitness-tracker/programs/${programId}`,
         label: fitnessStrings.navigation.toProgram,
       }}
     >
-      <RenameForm
-        label={fitnessStrings.workoutEdit.nameLabel}
-        currentName={workout.name}
-        url={`/api/fitness/workouts/${workout.id}`}
-      />
+      {workout ? (
+        <RenameForm
+          label={fitnessStrings.workoutEdit.nameLabel}
+          currentName={workout.name}
+          url={`/api/fitness/workouts/${workout.id}`}
+        />
+      ) : (
+        <NewWorkoutForm programId={programId} />
+      )}
       <section className={styles.section}>
-        <h2 id={slotsHeadingId} className={styles.heading}>
-          {fitnessStrings.workoutEdit.slotsTitle}
-        </h2>
-        {workout.slots.length === 0 ? (
+        <div className={styles.headingRow}>
+          <h2 id={slotsHeadingId} className={styles.heading}>
+            {fitnessStrings.workoutEdit.slotsTitle}
+          </h2>
+          {workout ? (
+            <AddLink
+              href={`/fitness-tracker/programs/${programId}/workouts/${workout.id}/slots/new`}
+              label={fitnessStrings.workoutEdit.addExercise}
+            />
+          ) : null}
+        </div>
+        {workout === null ? (
+          <p className={styles.empty}>{fitnessStrings.workoutEdit.nameFirst}</p>
+        ) : workout.slots.length === 0 ? (
           <p className={styles.empty}>{fitnessStrings.workoutEdit.noSlots}</p>
         ) : (
-          <ul className={styles.list} aria-labelledby={slotsHeadingId}>
-            {workout.slots.map((slot, index) => (
-              <li key={slot.id}>
-                <SlotRow
-                  programId={programId}
-                  workoutId={workout.id}
-                  slot={slot}
-                  index={index}
-                  count={workout.slots.length}
-                />
-              </li>
-            ))}
-          </ul>
+          <SlotList
+            programId={programId}
+            workoutId={workout.id}
+            slots={workout.slots}
+            className={styles.list}
+            labelledBy={slotsHeadingId}
+          />
         )}
       </section>
-      <AddSlotForm workoutId={workout.id} exercises={exercises} />
     </Screen>
   );
 }

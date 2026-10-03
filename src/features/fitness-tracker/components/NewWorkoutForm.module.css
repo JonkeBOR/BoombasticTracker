@@ -1,0 +1,31 @@
+.form {
+  composes: form from './RenameForm.module.css';
+}
+
+.label {
+  composes: label from './RenameForm.module.css';
+}
+
+.fields {
+  composes: fields from './RenameForm.module.css';
+}
+
+.input {
+  composes: input from './RenameForm.module.css';
+}
+
+.submit {
+  min-height: var(--tap-target-min);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  font: inherit;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.submit:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}

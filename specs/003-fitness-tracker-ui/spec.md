@@ -184,8 +184,8 @@ block 1, pause, and reactivate, checking the active program and block views afte
    never been active.
 2. **Given** a program with no workouts, **When** the user tries to activate it, **Then** a message explains
    that it needs at least one workout, and nothing changes.
-3. **Given** a 4-block program on block 2, **When** the user chooses "Skip to block", **Then** the choices are
-   block 3, block 4, and block 1 (start again).
+3. **Given** a 4-block program on block 2, **Then** blocks 3, 4 and 1 (start again) can be tapped to skip to
+   them, each after a confirmation, and block 2 opens the block view.
 4. **Given** the user picks block 4 and confirms, **Then** block 4 is current, its first workout is suggested,
    blocks 2 and 3 are shown as skipped, and every logged set is kept.
 5. **Given** the user jumped to block 4, **When** the user opens its first workout, **Then** the sets are
@@ -229,7 +229,7 @@ which ones the slot picker offers.
 ### Edge Cases
 
 - **No exercises yet** when adding a slot: the picker offers to create one inline.
-- **Already on the last block**: "Skip to block" offers only block 1 (start again).
+- **Already on the last block**: only block 1 (start again) can be tapped to skip to.
 - **Removing the current block when it's the last block**: the program starts a new pass at block
   1, even if earlier blocks were skipped.
 - **Removing a block before the current one**: the user stays on the same block, now shown under its new
@@ -291,7 +291,8 @@ which ones the slot picker offers.
 - **FR-011**: The active program view MUST list every block of the program in order with its label, its
   progress ("3 / 4 workouts") and one status: complete, current, upcoming or skipped. A block before the
   current block that isn't complete is skipped. The current block MUST be highlighted.
-- **FR-012**: Only the current block MUST open the block view.
+- **FR-012**: Only the current block MUST open the block view. Tapping a block the user can skip to (a later
+  block, or block 1 to start again) MUST open the skip confirmation for it. Other blocks are not tappable.
 - **FR-013**: The block view MUST list the program's workouts in order, each finished (with its date), in
   progress or not started, and MUST highlight the suggested workout.
 - **FR-014**: Tapping any not-started workout in the current block MUST start it, and tapping an in-progress
@@ -304,11 +305,13 @@ which ones the slot picker offers.
 **Workout session**
 
 - **FR-017**: The session view MUST show the workout name and block, then each exercise in slot order
-  with one row per planned set of the session's block: set number, target ("12 reps"), a weight input
-  prefilled with the last weight (empty if none), a reps input prefilled with the target, and a log button.
+  as a table with Set, Weight (kg) and Reps columns and one row per planned set of the session's block: the
+  set number, a weight input showing the block's last weight as a muted placeholder (none if there is no last
+  weight), a reps input prefilled with the target, and a log button. Logging with the weight input empty uses the placeholder weight.
 - **FR-018**: Logging a set MUST take a single tap when the prefilled values are right, with no confirmation.
   The weight MAY be left empty.
-- **FR-019**: A logged set MUST switch to a read-only logged state, with no inputs. A planned set with a set log
+- **FR-019**: A logged set MUST switch to a read-only logged state, with no inputs: the row keeps its columns,
+  shows the logged weight and reps as text with a check mark, and is tinted green. A planned set with a set log
   in the session MUST NOT be offered for logging again.
 - **FR-020**: Sets MAY be logged in any order, and unlogged sets are simply not recorded.
 - **FR-021**: Values typed but not yet logged MUST survive leaving and reopening the session in the same
@@ -326,11 +329,14 @@ which ones the slot picker offers.
   "Active" badge on the active one. "New program" asks for a name and a block count (default 4) and opens the
   new program's edit page.
 - **FR-026**: Program edit MUST allow renaming the program, adding a block at the end, labelling a block,
-  removing a block (not the last remaining one), and adding, renaming, reordering and removing workouts.
+  removing a block (not the last remaining one), and adding, reordering and removing workouts. A workout
+  is renamed on its own edit screen (FR-027).
 - **FR-027**: Workout edit MUST allow renaming the workout and adding, reordering and removing slots, with each
   slot showing its exercise, its optional tag and a summary of sets × reps per block (e.g. "3×12 · 3×10 · 3×8").
 - **FR-028**: Adding a slot MUST be one form with two required inputs, an exercise from the catalog (or a new
   one created inline) and sets × reps, applied to every block. It MUST NOT be possible to save it without both.
+  A workout MUST NOT hold the same exercise twice: adding or replacing with an exercise the workout already
+  has is refused (`exercise-already-in-workout`), and the pickers MUST NOT offer it.
 - **FR-029**: Slot edit MUST allow replacing the exercise, toggling optional, and per block: adding a set,
   removing the last set (not when only one is left), changing a set's target reps (1–999), quick fill with sets
   × reps, and copying the previous block's sets and reps. Each set shows its last weight read-only, or "—".
@@ -404,6 +410,11 @@ which ones the slot picker offers.
     nothing.
   - Set logs already stored are not changed. New set logs record the pass counter in their context, where they
     used to record the cycle number, so history can still be grouped by block across passes.
+- **FR-046**: Every fitness tracker screen MUST show a bottom tab bar with three icon tabs: Home
+  (`/fitness-tracker`), Current block (`/fitness-tracker/active/block`) and Next workout. Next workout opens the
+  session of the current block's suggested workout, resuming it when it is open and starting it otherwise; with
+  no active program it opens the current block view, which sends the user home. The tab of the current screen
+  MUST be marked as current.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -455,8 +466,8 @@ The following are derived for display and never stored:
 - **Block progress** counts the program's current workouts, so a workout removed mid-pass no longer counts.
 - **Typed values** are kept on the device only, until they are logged. Nothing unlogged is stored on the
   server.
-- **Reordering** workouts and slots uses simple move up/down actions. Blocks can't be reordered from the
-  screens, although the domain supports it.
+- **Reordering** workouts and slots is by drag and drop: a long press picks a row up, and a grip handle
+  also reorders by keyboard. Blocks can't be reordered from the screens, although the domain supports it.
 - **Online only**: no offline logging.
 - **Out of scope**: history views of past passes, blocks, workouts and sessions (including read-only finished
   sessions), profile lists, progress charts and statistics, alternative exercises,

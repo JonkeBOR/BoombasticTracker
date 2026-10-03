@@ -1,12 +1,11 @@
 .bar {
   position: sticky;
-  bottom: 0;
+  bottom: calc(var(--tab-bar-height) + var(--safe-area-bottom));
   display: flex;
   justify-content: flex-end;
   min-height: var(--sticky-bar-height);
   margin-block-start: auto;
   padding-block: var(--space-3);
-  padding-block-end: calc(var(--space-3) + var(--safe-area-bottom));
   background-color: var(--color-background);
   border-block-start: 1px solid var(--color-border);
 }

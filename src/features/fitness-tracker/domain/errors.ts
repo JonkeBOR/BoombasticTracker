@@ -17,6 +17,7 @@ export const fitnessErrorCodes = [
   'already-weighed-in-today',
   'exercise-in-use',
   'exercise-archived',
+  'exercise-already-in-workout',
   'program-active',
   'program-needs-a-block',
   'program-incomplete',

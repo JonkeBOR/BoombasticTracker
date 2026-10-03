@@ -120,6 +120,22 @@ describe('exercise slot handlers', () => {
       expect(await jsonOf(response)).toEqual({ error: 'exercise-archived' });
     });
 
+    it('answers 409 exercise-already-in-workout for an exercise the workout has', async () => {
+      const program = await withOneSlot();
+      const workout = program.workouts[0];
+
+      const response = await handleAddSlot(
+        context({
+          body: { exerciseId: workout?.slots[0]?.exercise.id, sets: 3, reps: 10 },
+          params: { id: workout?.id ?? '' },
+        }),
+      );
+
+      expect(response.status).toBe(409);
+      expect(await jsonOf(response)).toEqual({ error: 'exercise-already-in-workout' });
+      expect((await reload(program)).workouts[0]?.slots).toHaveLength(1);
+    });
+
     it('answers 404 for an exercise that does not exist', async () => {
       const { workoutId } = await emptyWorkout(2);
 

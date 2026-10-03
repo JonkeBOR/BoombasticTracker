@@ -4,7 +4,7 @@
   gap: var(--space-3);
   min-height: 100dvh;
   padding-block-start: calc(var(--space-3) + var(--safe-area-top));
-  padding-block-end: calc(var(--space-5) + var(--safe-area-bottom));
+  padding-block-end: calc(var(--space-5) + var(--tab-bar-height) + var(--safe-area-bottom));
   padding-inline-start: calc(var(--space-4) + var(--safe-area-left));
   padding-inline-end: calc(var(--space-4) + var(--safe-area-right));
 }

@@ -168,43 +168,66 @@ describe('ProgramEditScreen', () => {
       ).toBe('/fitness-tracker/programs/p1/workouts/w1');
     });
 
-    it('moves a workout to the position below', async () => {
+    it('gives every workout a reorder handle that can be picked up with the keyboard', () => {
       renderScreen();
 
-      fireEvent.click(
-        screen.getByRole('button', { name: fitnessStrings.common.moveDownFor('Upper A') }),
+      const rows = within(workoutList()).getAllByRole('listitem');
+      const handle = within(rows[0] as HTMLElement).getByRole('button', {
+        name: fitnessStrings.reorder.handleFor('Upper A'),
+      });
+      expect(handle.getAttribute('aria-roledescription')).toBe(
+        fitnessStrings.reorder.roleDescription,
       );
-
-      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-      expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/workouts/w1');
-      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('PATCH');
-      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ toPosition: 2 }));
+      expect(handle.getAttribute('tabindex')).toBe('0');
+      expect(
+        within(rows[1] as HTMLElement).getByRole('button', {
+          name: fitnessStrings.reorder.handleFor('Lower A'),
+        }),
+      ).toBeDefined();
     });
 
-    it('FR-026: renames a workout from its row', async () => {
+    it('keeps a workout row to its name, a trash can and a reorder handle', () => {
       renderScreen();
       const row = within(workoutList()).getAllByRole('listitem')[0] as HTMLElement;
 
-      fireEvent.click(within(row).getByRole('button', { name: fitnessStrings.common.rename }));
-      fireEvent.change(within(row).getByRole('textbox'), { target: { value: 'Push' } });
-      fireEvent.click(within(row).getByRole('button', { name: fitnessStrings.common.save }));
+      expect(
+        within(row)
+          .getAllByRole('button')
+          .map((button) => button.getAttribute('aria-label')),
+      ).toEqual([
+        fitnessStrings.programEdit.removeWorkoutFor('Upper A'),
+        fitnessStrings.reorder.handleFor('Upper A'),
+      ]);
+      expect(within(row).queryByRole('textbox')).toBeNull();
+    });
+
+    it('FR-026: removes a workout from its trash can only after confirming', async () => {
+      renderScreen();
+      const row = within(workoutList()).getAllByRole('listitem')[0] as HTMLElement;
+
+      fireEvent.click(
+        within(row).getByRole('button', {
+          name: fitnessStrings.programEdit.removeWorkoutFor('Upper A'),
+        }),
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(
+        within(row).getByRole('button', {
+          name: fitnessStrings.programEdit.removeWorkoutConfirmLabel,
+        }),
+      );
 
       await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
       expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/workouts/w1');
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE');
     });
 
-    it('adds a workout by name', async () => {
+    it('adds a workout from a plus link beside the heading, which opens a new workout', () => {
       renderScreen();
 
-      fireEvent.change(
-        screen.getByRole('textbox', { name: fitnessStrings.programEdit.workoutNameLabel }),
-        { target: { value: 'Day 3' } },
-      );
-      fireEvent.click(screen.getByRole('button', { name: fitnessStrings.programEdit.addWorkout }));
-
-      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-      expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/programs/p1/workouts');
-      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ name: 'Day 3' }));
+      const add = screen.getByRole('link', { name: fitnessStrings.programEdit.addWorkout });
+      expect(add.getAttribute('href')).toBe('/fitness-tracker/programs/p1/workouts/new');
+      expect(add.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('FR-005: explains what to do when there are no workouts', () => {

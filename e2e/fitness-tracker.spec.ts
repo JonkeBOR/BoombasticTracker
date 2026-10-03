@@ -19,12 +19,18 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await page.getByRole('button', { name: fitnessStrings.programs.create }).click();
   await expect(page.getByRole('heading', { level: 1, name: programName })).toBeVisible();
 
-  await page
-    .getByLabel(fitnessStrings.programEdit.workoutNameLabel, { exact: true })
-    .fill(workoutName);
-  await page.getByRole('button', { name: fitnessStrings.programEdit.addWorkout }).click();
-  await page.getByRole('link', { name: workoutName }).click();
+  await page.getByRole('link', { name: fitnessStrings.programEdit.addWorkout }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: fitnessStrings.workoutEdit.newTitle }),
+  ).toBeVisible();
+  await page.getByLabel(fitnessStrings.workoutEdit.nameLabel, { exact: true }).fill(workoutName);
+  await page.getByRole('button', { name: fitnessStrings.workoutEdit.create }).click();
+  await expect(page.getByRole('heading', { level: 1, name: workoutName })).toBeVisible();
 
+  await page.getByRole('link', { name: fitnessStrings.workoutEdit.addExercise }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: fitnessStrings.workoutEdit.addExercise }),
+  ).toBeVisible();
   await page
     .getByLabel(fitnessStrings.workoutEdit.exerciseLabel, { exact: true })
     .selectOption({ label: fitnessStrings.workoutEdit.newExerciseOption });
@@ -32,6 +38,7 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await page.getByLabel(fitnessStrings.workoutEdit.setsLabel, { exact: true }).fill('1');
   await page.getByLabel(fitnessStrings.workoutEdit.repsLabel, { exact: true }).fill('5');
   await page.getByRole('button', { name: fitnessStrings.workoutEdit.save }).click();
+  await expect(page.getByRole('heading', { level: 1, name: workoutName })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: exerciseName })).toContainText('1×5');
 
   await page.getByRole('link', { name: fitnessStrings.navigation.toProgram }).click();
@@ -61,8 +68,14 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await page.getByRole('button', { name: fitnessStrings.session.finishWorkout }).click();
   await expect(page.getByText(fitnessStrings.block.programComplete)).toBeVisible();
 
-  await page.getByRole('button', { name: new RegExp(workoutName) }).click();
+  await page
+    .getByRole('navigation', { name: fitnessStrings.tabBar.label })
+    .getByRole('button', { name: fitnessStrings.tabBar.workout })
+    .click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: new RegExp(workoutName) }),
+  ).toBeVisible();
   await expect(
     page.getByRole('textbox', { name: fitnessStrings.session.weightLabel(1) }),
-  ).toHaveValue('42.5');
+  ).toHaveAttribute('placeholder', '42.5');
 });

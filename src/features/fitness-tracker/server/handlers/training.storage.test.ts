@@ -8,7 +8,12 @@ import { openTestDatabase, type TestDatabase } from '../storage-test-database';
 import { createProgramFromSpec, expectOk, type ProgramSpec } from '../storage-test-support';
 import { getSession, startWorkout } from '../training';
 import { handlerContext, jsonOf } from './handler-test-support';
-import { handleFinishSession, handleLogSet, handleStartSession } from './training';
+import {
+  handleFinishSession,
+  handleLogSet,
+  handleStartSession,
+  handleStartUpcomingSession,
+} from './training';
 
 describe('training handlers', () => {
   let testDatabase: TestDatabase;
@@ -119,6 +124,53 @@ describe('training handlers', () => {
       );
 
       expect(await jsonOf(response)).toEqual({ error: 'workout-not-in-active-program' });
+    });
+  });
+
+  describe('opening the upcoming session', () => {
+    async function upcoming(): Promise<{ status: number; body: unknown }> {
+      const response = await handleStartUpcomingSession(context({}));
+      return { status: response.status, body: await jsonOf(response) };
+    }
+
+    function sessionIdOf(body: unknown): string {
+      return typeof body === 'object' && body !== null && 'sessionId' in body
+        ? String(body.sessionId)
+        : '';
+    }
+
+    it('starts the suggested workout of the current block when none is open', async () => {
+      await activeProgram();
+
+      const { status, body } = await upcoming();
+
+      expect(status).toBe(200);
+      const session = expectOk(await getSession(testDatabase.db, profileId, sessionIdOf(body)));
+      expect(session).toMatchObject({ status: 'in_progress', workout: { name: 'Upper' } });
+    });
+
+    it('answers the open session instead of starting another', async () => {
+      const program = await activeProgram();
+      const open = await start(program.workouts[0]?.id ?? '');
+
+      const { body } = await upcoming();
+
+      expect(sessionIdOf(body)).toBe(open);
+    });
+
+    it('moves on to the next workout once the suggested one is finished', async () => {
+      const program = await activeProgram();
+      const first = await start(program.workouts[0]?.id ?? '');
+      await handleFinishSession(context({ params: { id: first } }));
+
+      const { body } = await upcoming();
+
+      const session = expectOk(await getSession(testDatabase.db, profileId, sessionIdOf(body)));
+      expect(session.workout.name).toBe('Lower');
+    });
+
+    it('answers 409 no-active-program when nothing is active', async () => {
+      expect(await upcoming()).toEqual({ status: 409, body: { error: 'no-active-program' } });
     });
   });
 

@@ -9,6 +9,7 @@ import {
   unarchiveExercise,
 } from './exercises';
 import { ensureProfile } from './profile';
+import { exerciseSlots } from './schema';
 import { createProgramFromSpec, expectOk } from './storage-test-support';
 import { openTestDatabase, type TestDatabase } from './storage-test-database';
 import { logSet, startWorkout } from './training';
@@ -165,25 +166,25 @@ describe('exercise usage', () => {
     expect(usage.hasSetLogs).toBe(false);
   });
 
-  it('lists a workout once even when it holds the exercise twice', async () => {
+  it('lists a workout once even when data from before the one-per-workout rule holds the exercise twice', async () => {
     const { db } = testDatabase;
-    await createProgramFromSpec(
+    const program = await createProgramFromSpec(
       db,
       profileId,
       {
         blockCount: 1,
-        workouts: [
-          {
-            name: 'Day',
-            slots: [
-              { exercise: 'Curl', targetReps: [10] },
-              { exercise: 'Curl', targetReps: [12] },
-            ],
-          },
-        ],
+        workouts: [{ name: 'Day', slots: [{ exercise: 'Curl', targetReps: [10] }] }],
       },
       now,
     );
+    const workout = program.workouts[0];
+    await db.insert(exerciseSlots).values({
+      id: crypto.randomUUID(),
+      workoutId: workout?.id ?? '',
+      position: 2,
+      exerciseId: workout?.slots[0]?.exercise.id ?? '',
+      isOptional: false,
+    });
     const curl = (await listExercises(db, profileId, { includeArchived: false }))[0];
 
     const usage = expectOk(await getExerciseUsage(db, profileId, curl?.id ?? ''));

@@ -10,34 +10,18 @@ type RenameFormProps = {
   label: string;
   currentName: string;
   url: string;
-  isCollapsible?: boolean;
 };
 
-export function RenameForm({ label, currentName, url, isCollapsible = false }: RenameFormProps) {
+export function RenameForm({ label, currentName, url }: RenameFormProps) {
   const inputId = useId();
-  const [isOpen, setIsOpen] = useState(!isCollapsible);
   const [name, setName] = useState(currentName);
   const action = useFitnessAction();
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (name !== currentName) {
-      const succeeded = await action.run('PATCH', url, { name });
-      if (!succeeded) {
-        return;
-      }
+      await action.run('PATCH', url, { name });
     }
-    if (isCollapsible) {
-      setIsOpen(false);
-    }
-  }
-
-  if (!isOpen) {
-    return (
-      <button type="button" className={styles.toggle} onClick={() => setIsOpen(true)}>
-        {fitnessStrings.common.rename}
-      </button>
-    );
   }
 
   return (
@@ -55,7 +39,7 @@ export function RenameForm({ label, currentName, url, isCollapsible = false }: R
           onChange={(event) => setName(event.target.value)}
         />
         <button type="submit" className={styles.submit} disabled={action.pending}>
-          {isCollapsible ? fitnessStrings.common.save : fitnessStrings.common.rename}
+          {fitnessStrings.common.rename}
         </button>
       </div>
       <InlineError message={action.errorMessage} />

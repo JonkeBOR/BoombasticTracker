@@ -13,7 +13,8 @@
 }
 
 .current,
-.other {
+.other,
+.skippable {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -25,6 +26,18 @@
   background-color: var(--color-surface);
   color: var(--color-text);
   text-decoration: none;
+}
+
+.skippable {
+  width: 100%;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.skippable:active {
+  background-color: var(--color-surface-muted);
 }
 
 .current {
