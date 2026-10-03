@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { listExercises } from '@/features/fitness-tracker/server/exercises';
 import { requireFitnessContext } from '@/features/fitness-tracker/server/page-context';
 import { getProgram } from '@/features/fitness-tracker/server/programs';
 import { WorkoutEditScreen } from './WorkoutEditScreen';
@@ -18,6 +17,5 @@ export default async function WorkoutEditPage({ params }: WorkoutEditPageProps) 
   if (!workout) {
     notFound();
   }
-  const exercises = await listExercises(db, profileId, { includeArchived: false });
-  return <WorkoutEditScreen programId={programId} workout={workout} exercises={exercises} />;
+  return <WorkoutEditScreen programId={programId} workout={workout} />;
 }

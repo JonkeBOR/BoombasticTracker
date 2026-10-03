@@ -304,12 +304,13 @@ which ones the slot picker offers.
 **Workout session**
 
 - **FR-017**: The session view MUST show the workout name and block, then each exercise in slot order
-  with one row per planned set of the session's block: set number, target ("12 reps"), a weight input
-  showing the block's last weight as a muted placeholder (none if there is no last weight), a reps input
-  prefilled with the target, and a log button. Logging with the weight input empty uses the placeholder weight.
+  as a table with Set, Weight (kg) and Reps columns and one row per planned set of the session's block: the
+  set number, a weight input showing the block's last weight as a muted placeholder (none if there is no last
+  weight), a reps input prefilled with the target, and a log button. Logging with the weight input empty uses the placeholder weight.
 - **FR-018**: Logging a set MUST take a single tap when the prefilled values are right, with no confirmation.
   The weight MAY be left empty.
-- **FR-019**: A logged set MUST switch to a read-only logged state, with no inputs. A planned set with a set log
+- **FR-019**: A logged set MUST switch to a read-only logged state, with no inputs: the row keeps its columns,
+  shows the logged weight and reps as text with a check mark, and is tinted green. A planned set with a set log
   in the session MUST NOT be offered for logging again.
 - **FR-020**: Sets MAY be logged in any order, and unlogged sets are simply not recorded.
 - **FR-021**: Values typed but not yet logged MUST survive leaving and reopening the session in the same
@@ -327,11 +328,14 @@ which ones the slot picker offers.
   "Active" badge on the active one. "New program" asks for a name and a block count (default 4) and opens the
   new program's edit page.
 - **FR-026**: Program edit MUST allow renaming the program, adding a block at the end, labelling a block,
-  removing a block (not the last remaining one), and adding, renaming, reordering and removing workouts.
+  removing a block (not the last remaining one), and adding, reordering and removing workouts. A workout
+  is renamed on its own edit screen (FR-027).
 - **FR-027**: Workout edit MUST allow renaming the workout and adding, reordering and removing slots, with each
   slot showing its exercise, its optional tag and a summary of sets × reps per block (e.g. "3×12 · 3×10 · 3×8").
 - **FR-028**: Adding a slot MUST be one form with two required inputs, an exercise from the catalog (or a new
   one created inline) and sets × reps, applied to every block. It MUST NOT be possible to save it without both.
+  A workout MUST NOT hold the same exercise twice: adding or replacing with an exercise the workout already
+  has is refused (`exercise-already-in-workout`), and the pickers MUST NOT offer it.
 - **FR-029**: Slot edit MUST allow replacing the exercise, toggling optional, and per block: adding a set,
   removing the last set (not when only one is left), changing a set's target reps (1–999), quick fill with sets
   × reps, and copying the previous block's sets and reps. Each set shows its last weight read-only, or "—".
@@ -456,8 +460,8 @@ The following are derived for display and never stored:
 - **Block progress** counts the program's current workouts, so a workout removed mid-pass no longer counts.
 - **Typed values** are kept on the device only, until they are logged. Nothing unlogged is stored on the
   server.
-- **Reordering** workouts and slots uses simple move up/down actions. Blocks can't be reordered from the
-  screens, although the domain supports it.
+- **Reordering** workouts and slots is by drag and drop: a long press picks a row up, and a grip handle
+  also reorders by keyboard. Blocks can't be reordered from the screens, although the domain supports it.
 - **Online only**: no offline logging.
 - **Out of scope**: history views of past passes, blocks, workouts and sessions (including read-only finished
   sessions), profile lists, progress charts and statistics, alternative exercises,

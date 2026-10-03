@@ -8,13 +8,21 @@ export const fitnessStrings = {
     remove: 'Remove',
     rename: 'Rename',
     delete: 'Delete',
-    moveUpFor: (name: string) => `Move up: ${name}`,
-    moveDownFor: (name: string) => `Move down: ${name}`,
-    moveUpSymbol: '↑',
-    moveDownSymbol: '↓',
     optional: 'Optional',
     archived: 'Archived',
     noValue: '—',
+  },
+  reorder: {
+    handleFor: (name: string) => `Reorder ${name}`,
+    roleDescription: 'reorderable item',
+    instructions:
+      'Press space or enter to pick up the item, the arrow keys to move it, space or enter to drop it, and escape to cancel. On a touch screen, press and hold the item, then drag it.',
+    pickedUp: (name: string) => `Picked up ${name}.`,
+    movedTo: (name: string, position: number, count: number) =>
+      `${name} is at position ${position} of ${count}.`,
+    droppedAt: (name: string, position: number, count: number) =>
+      `${name} dropped at position ${position} of ${count}.`,
+    cancelled: (name: string) => `Reordering cancelled. ${name} is back in its place.`,
   },
   navigation: {
     toHome: 'Fitness Tracker',
@@ -55,9 +63,8 @@ export const fitnessStrings = {
     blockLabelLabel: (blockNumber: number) => `Label for block ${blockNumber}`,
     addBlock: 'Add block',
     workoutsTitle: 'Workouts',
-    workoutNameLabel: 'Workout name',
     addWorkout: 'Add workout',
-    noWorkouts: 'No workouts yet. Add the first one.',
+    noWorkouts: 'No workouts yet. Tap + to add one.',
     activate: 'Activate',
     activateConfirmLabel: 'Activate and pause the other',
     activateWillPause: (otherName: string) => `${otherName} will be paused and keep its place.`,
@@ -84,6 +91,9 @@ export const fitnessStrings = {
   },
   workoutEdit: {
     nameLabel: 'Workout name',
+    newTitle: 'New workout',
+    create: 'Create workout',
+    nameFirst: 'Name the workout, then add its exercises.',
     slotsTitle: 'Exercises',
     noSlots: 'No exercises yet. Add the first one.',
     addExercise: 'Add exercise',
@@ -164,7 +174,6 @@ export const fitnessStrings = {
   session: {
     heading: (workoutName: string, blockNumber: number | null) =>
       blockNumber === null ? workoutName : `${workoutName} · Block ${blockNumber}`,
-    target: (reps: number) => `${reps} reps`,
     weightLabel: (setNumber: number, exerciseName?: string) =>
       exerciseName === undefined
         ? `Weight, set ${setNumber}`
@@ -178,11 +187,8 @@ export const fitnessStrings = {
         ? `Log, set ${setNumber}`
         : `Log, set ${setNumber}, ${exerciseName}`,
     loggedLabel: (setNumber: number) => `Set ${setNumber} logged`,
-    loggedValues: (reps: number, kg: string | null) =>
-      kg === null ? `${reps} reps` : `${kg} kg × ${reps}`,
     logSymbol: '✓',
-    weightUnit: 'kg',
-    repsUnit: 'reps',
+    columns: { set: 'Set', weight: 'Weight (kg)', reps: 'Reps', log: 'Log' },
     finishWorkout: 'Finish workout',
     finishEmptyConfirmLabel: 'Finish',
     finishEmptyConfirm: 'Finish without logging any sets?',
@@ -230,6 +236,7 @@ export const fitnessErrorStrings: Record<FitnessErrorCode, string> = {
   'exercise-in-use':
     'This exercise is used in a workout or has logged sets, so it cannot be deleted. Archive it instead.',
   'exercise-archived': 'That exercise is archived. Unarchive it first.',
+  'exercise-already-in-workout': 'This workout already has that exercise.',
   'program-active': 'Pause the program before deleting it.',
   'program-needs-a-block': 'A program needs at least one block.',
   'program-incomplete':

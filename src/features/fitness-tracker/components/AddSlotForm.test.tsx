@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fitnessErrorStrings, fitnessStrings } from '@/lib/strings/fitness';
 import { AddSlotForm } from './AddSlotForm';
 
-const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+
+const doneHref = '/fitness-tracker/programs/p1/workouts/w1';
 
 const exercises = [
   { id: 'e1', name: 'Incline bench press', isArchived: false },
@@ -23,6 +25,7 @@ describe('AddSlotForm', () => {
     vi.unstubAllGlobals();
     fetchMock.mockReset();
     router.refresh.mockReset();
+    router.replace.mockReset();
   });
 
   function select(): HTMLSelectElement {
@@ -55,7 +58,7 @@ describe('AddSlotForm', () => {
   }
 
   it('FR-037: offers the exercises it is given and a new one, with nothing chosen yet', () => {
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     expect([...select().options].map((option) => option.text)).toEqual([
       fitnessStrings.workoutEdit.choose,
@@ -68,14 +71,14 @@ describe('AddSlotForm', () => {
   });
 
   it('FR-010: gives sets and reps a numeric keypad', () => {
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     expect(input(fitnessStrings.workoutEdit.setsLabel).getAttribute('inputmode')).toBe('numeric');
     expect(input(fitnessStrings.workoutEdit.repsLabel).getAttribute('inputmode')).toBe('numeric');
   });
 
   it('FR-028: keeps Save disabled until an exercise, sets and reps are all given', () => {
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: 'e1' } });
     expect(save().disabled).toBe(true);
@@ -94,7 +97,7 @@ describe('AddSlotForm', () => {
     ['2.5', '10'],
     ['x', '10'],
   ])('FR-015: keeps Save disabled for %s sets of %s reps', (sets, reps) => {
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: 'e1' } });
     fillSetsAndReps(sets, reps);
@@ -102,21 +105,20 @@ describe('AddSlotForm', () => {
     expect(save().disabled).toBe(true);
   });
 
-  it('US3 scenario 3: creates the slot from the chosen exercise, sets and reps', async () => {
+  it('US3 scenario 3: creates the slot from the chosen exercise, sets and reps, then goes back', async () => {
     fetchMock.mockResolvedValue(Response.json({ id: 's9' }));
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: 'e1' } });
     fillSetsAndReps('3', '10');
     fireEvent.click(save());
 
-    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith(doneHref));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/workouts/w1/slots');
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
       JSON.stringify({ exerciseId: 'e1', sets: 3, reps: 10 }),
     );
-    await waitFor(() => expect(input(fitnessStrings.workoutEdit.setsLabel).value).toBe(''));
   });
 
   it('US3 scenario 3: creates a new exercise first, then the slot with its id', async () => {
@@ -124,7 +126,7 @@ describe('AddSlotForm', () => {
       Response.json({ id: 'e9', name: 'Seal rows', isArchived: false }),
     );
     fetchMock.mockResolvedValueOnce(Response.json({ id: 's9' }));
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: '__new__' } });
     expect(save().disabled).toBe(true);
@@ -144,7 +146,7 @@ describe('AddSlotForm', () => {
   });
 
   it('edge case: opens on the new-exercise choice when there are no exercises yet', () => {
-    render(<AddSlotForm workoutId="w1" exercises={[]} />);
+    render(<AddSlotForm workoutId="w1" exercises={[]} doneHref={doneHref} />);
 
     expect(select().value).toBe('__new__');
     expect(input(fitnessStrings.workoutEdit.newExerciseNameLabel)).toBeDefined();
@@ -157,7 +159,7 @@ describe('AddSlotForm', () => {
     fetchMock.mockResolvedValueOnce(
       Response.json({ error: 'prescription-needs-a-set' }, { status: 400 }),
     );
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: '__new__' } });
     fireEvent.change(input(fitnessStrings.workoutEdit.newExerciseNameLabel), {
@@ -177,7 +179,7 @@ describe('AddSlotForm', () => {
 
   it('FR-013: shows a refused exercise name inline without creating a slot', async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ error: 'name-taken' }, { status: 409 }));
-    render(<AddSlotForm workoutId="w1" exercises={exercises} />);
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
 
     fireEvent.change(select(), { target: { value: '__new__' } });
     fireEvent.change(input(fitnessStrings.workoutEdit.newExerciseNameLabel), {

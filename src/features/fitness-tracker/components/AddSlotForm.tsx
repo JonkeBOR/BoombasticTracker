@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { type FormEvent, useId, useState } from 'react';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import type { Exercise } from '../domain/types';
@@ -8,7 +9,7 @@ import { InlineError } from './InlineError';
 import { readId } from './read-id';
 import { useFitnessAction } from './useFitnessAction';
 
-type AddSlotFormProps = { workoutId: string; exercises: readonly Exercise[] };
+type AddSlotFormProps = { workoutId: string; exercises: readonly Exercise[]; doneHref: string };
 
 const newExerciseValue = '__new__';
 const wholeNumber = /^\d+$/;
@@ -17,7 +18,8 @@ function parseCount(text: string): number | null {
   return wholeNumber.test(text.trim()) ? Number(text.trim()) : null;
 }
 
-export function AddSlotForm({ workoutId, exercises }: AddSlotFormProps) {
+export function AddSlotForm({ workoutId, exercises, doneHref }: AddSlotFormProps) {
+  const router = useRouter();
   const selectId = useId();
   const nameId = useId();
   const setsId = useId();
@@ -66,22 +68,16 @@ export function AddSlotForm({ workoutId, exercises }: AddSlotFormProps) {
       ]);
       setSelected(exerciseId);
     }
-    const succeeded = await action.run('POST', `/api/fitness/workouts/${workoutId}/slots`, {
-      exerciseId,
-      sets: setCount,
-      reps: repCount,
-    });
-    if (succeeded) {
-      setSelected('');
-      setNewName('');
-      setSets('');
-      setReps('');
-    }
+    await action.run(
+      'POST',
+      `/api/fitness/workouts/${workoutId}/slots`,
+      { exerciseId, sets: setCount, reps: repCount },
+      () => router.replace(doneHref),
+    );
   }
 
   return (
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
-      <h2 className={styles.heading}>{fitnessStrings.workoutEdit.addExercise}</h2>
       <label className={styles.label} htmlFor={selectId}>
         {fitnessStrings.workoutEdit.exerciseLabel}
       </label>

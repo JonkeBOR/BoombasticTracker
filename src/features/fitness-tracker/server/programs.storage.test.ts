@@ -17,6 +17,7 @@ import {
   moveWorkout,
   removeTrainingBlock,
   removeWorkout,
+  replaceSlotExercise,
   setPrescription,
   setSlotOptional,
 } from './programs';
@@ -118,11 +119,12 @@ describe('program structure', () => {
     const { program, workoutId } = await programWithOneSlot(2, [10]);
     const slotId = program.workouts[0]?.slots[0]?.id ?? '';
     const blockId = program.blocks[0]?.id ?? '';
+    const rowId = expectOk(await addExercise(db, profileId, { name: 'Row' }, now)).id;
 
     for (const invalid of [0, 12.5, 1000, -3]) {
       expect(
         await addExerciseSlot(db, profileId, workoutId, {
-          exerciseId: inclineBenchId,
+          exerciseId: rowId,
           targetReps: [10, invalid],
         }),
       ).toEqual({ ok: false, error: 'invalid-target' });
@@ -245,6 +247,49 @@ describe('program structure', () => {
     expect(expectOk(await getProgram(db, profileId, created.id)).workouts[0]?.slots).toEqual([]);
   });
 
+  it('refuses an exercise the workout already has, when adding or replacing', async () => {
+    const { db } = testDatabase;
+    const { program, workoutId } = await programWithOneSlot(2, [10]);
+    const row = expectOk(await addExercise(db, profileId, { name: 'Row' }, now));
+    const withRow = expectOk(
+      await addExerciseSlot(db, profileId, workoutId, { exerciseId: row.id, targetReps: [10] }),
+    );
+    const [benchSlot, rowSlot] = withRow.workouts[0]?.slots ?? [];
+
+    expect(
+      await addExerciseSlot(db, profileId, workoutId, {
+        exerciseId: inclineBenchId,
+        targetReps: [8],
+      }),
+    ).toEqual({ ok: false, error: 'exercise-already-in-workout' });
+    expect(
+      await replaceSlotExercise(db, profileId, rowSlot?.id ?? '', { exerciseId: inclineBenchId }),
+    ).toEqual({ ok: false, error: 'exercise-already-in-workout' });
+    expectOk(
+      await replaceSlotExercise(db, profileId, benchSlot?.id ?? '', { exerciseId: inclineBenchId }),
+    );
+    expect(
+      expectOk(await getProgram(db, profileId, program.id)).workouts[0]?.slots.map(
+        (slot) => slot.exercise.id,
+      ),
+    ).toEqual([inclineBenchId, row.id]);
+  });
+
+  it('allows the same exercise in different workouts', async () => {
+    const { db } = testDatabase;
+    const { program } = await programWithOneSlot(1, [10]);
+    const otherWorkoutId =
+      expectOk(await addWorkout(db, profileId, program.id, { name: 'Upper B' })).workouts[1]?.id ??
+      '';
+
+    expectOk(
+      await addExerciseSlot(db, profileId, otherWorkoutId, {
+        exerciseId: inclineBenchId,
+        targetReps: [10],
+      }),
+    );
+  });
+
   it('keeps the planned sets that still exist when a prescription changes', async () => {
     const { db } = testDatabase;
     const { program: initial } = await programWithOneSlot(2, [10, 10, 10]);
@@ -288,9 +333,10 @@ describe('program structure', () => {
       'Lower A',
     ]);
 
+    const rowId = expectOk(await addExercise(db, profileId, { name: 'Row' }, now)).id;
     expectOk(
       await addExerciseSlot(db, profileId, upperId, {
-        exerciseId: inclineBenchId,
+        exerciseId: rowId,
         targetReps: [8],
       }),
     );

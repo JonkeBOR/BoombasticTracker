@@ -42,10 +42,27 @@ function SlotSection({
           <span className={styles.tag}>{fitnessStrings.common.optional}</span>
         ) : null}
       </div>
-      <ul className={styles.sets}>
-        {slot.plannedSets.map((plannedSet) => (
-          <li key={plannedSet.id}>
+      <table className={styles.sets} aria-labelledby={headingId}>
+        <thead>
+          <tr>
+            <th scope="col" className={styles.setColumn}>
+              {fitnessStrings.session.columns.set}
+            </th>
+            <th scope="col" className={styles.column}>
+              {fitnessStrings.session.columns.weight}
+            </th>
+            <th scope="col" className={styles.column}>
+              {fitnessStrings.session.columns.reps}
+            </th>
+            <th scope="col" className={styles.logColumn}>
+              <span className={styles.visuallyHidden}>{fitnessStrings.session.columns.log}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {slot.plannedSets.map((plannedSet) => (
             <SetRow
+              key={plannedSet.id}
               sessionId={session.id}
               exerciseName={slot.exercise.name}
               plannedSet={plannedSet}
@@ -54,9 +71,9 @@ function SlotSection({
               onDraftChange={(patch) => setDraft(plannedSet.id, patch)}
               onLogged={() => clearDraft(plannedSet.id)}
             />
-          </li>
-        ))}
-      </ul>
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

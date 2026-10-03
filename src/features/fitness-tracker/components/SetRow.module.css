@@ -1,49 +1,40 @@
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.row td,
+.logged td {
+  padding: 0 var(--space-1);
+  vertical-align: middle;
 }
 
-.heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
+.logged td {
+  height: var(--tap-target-min);
+  background-color: color-mix(in srgb, var(--color-success) 14%, transparent);
 }
 
-.fields {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.logged td:first-child {
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
 }
 
-.logged {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap-target-min);
-  color: var(--color-success);
-}
-
-.check {
-  font-weight: 700;
+.logged td:last-child {
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
 }
 
 .number {
   font-weight: 600;
+  text-align: center;
 }
 
-.target {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.values {
+.logged .value {
+  padding-inline-start: calc(var(--space-1) + var(--space-2) + 1px);
   font-weight: 600;
 }
 
-.weight,
-.reps {
+.field {
+  width: 40%;
+}
+
+.input {
+  width: 100%;
   min-height: var(--tap-target-min);
   padding-inline: var(--space-2);
   border: 1px solid var(--color-border);
@@ -53,28 +44,28 @@
   font: inherit;
 }
 
-.weight {
-  width: 5rem;
-}
-
-.weight::placeholder {
+.input::placeholder {
   color: var(--color-text-muted);
   opacity: 1;
 }
 
-.reps {
-  width: 4rem;
+.action {
+  text-align: center;
 }
 
-.unit {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-target-min);
+  color: var(--color-success);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
 }
 
 .log {
   min-width: var(--tap-target-min);
   min-height: var(--tap-target-min);
-  margin-inline-start: auto;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
   background-color: var(--color-accent);
@@ -87,4 +78,13 @@
   border-color: var(--color-border);
   background-color: var(--color-surface-muted);
   color: var(--color-text-muted);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

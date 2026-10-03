@@ -21,6 +21,7 @@ type SetRowProps = {
 
 const wholeNumber = /^\d+$/;
 const maxReps = 999;
+const columnCount = 4;
 
 function parseReps(text: string): number | null {
   const trimmed = text.trim();
@@ -45,20 +46,21 @@ export function SetRow({
 
   if (logged) {
     return (
-      <div className={styles.logged}>
-        <span className={styles.check} aria-hidden="true">
-          {fitnessStrings.session.logSymbol}
-        </span>
-        <span className={styles.number}>
-          {fitnessStrings.session.loggedLabel(plannedSet.setNumber)}
-        </span>
-        <span className={styles.values}>
-          {fitnessStrings.session.loggedValues(
-            logged.reps,
-            logged.weightKg === null ? null : formatKg(logged.weightKg),
-          )}
-        </span>
-      </div>
+      <tr className={styles.logged}>
+        <td className={styles.number}>{plannedSet.setNumber}</td>
+        <td className={styles.value}>
+          {logged.weightKg === null ? fitnessStrings.common.noValue : formatKg(logged.weightKg)}
+        </td>
+        <td className={styles.value}>{logged.reps}</td>
+        <td className={styles.action}>
+          <span className={styles.check} aria-hidden="true">
+            {fitnessStrings.session.logSymbol}
+          </span>
+          <span className={styles.visuallyHidden}>
+            {fitnessStrings.session.loggedLabel(plannedSet.setNumber)}
+          </span>
+        </td>
+      </tr>
     );
   }
 
@@ -66,6 +68,7 @@ export function SetRow({
     plannedSet.suggestedWeightKg === null ? '' : formatKg(plannedSet.suggestedWeightKg);
   const weightText = draft?.weight ?? '';
   const repsText = draft?.reps ?? String(plannedSet.targetReps);
+  const errorMessage = inputError ?? action.errorMessage;
 
   async function log() {
     const weightKg = parseKgInput(weightText.trim() === '' ? suggestedWeightText : weightText);
@@ -90,48 +93,51 @@ export function SetRow({
   }
 
   return (
-    <div className={styles.row}>
-      <div className={styles.heading}>
-        <span className={styles.number}>
-          {fitnessStrings.slotEdit.setNumber(plannedSet.setNumber)}
-        </span>
-        <span className={styles.target}>
-          {fitnessStrings.session.target(plannedSet.targetReps)}
-        </span>
-      </div>
-      <div className={styles.fields}>
-        <input
-          className={styles.weight}
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          aria-label={fitnessStrings.session.weightLabel(plannedSet.setNumber, exerciseName)}
-          placeholder={suggestedWeightText}
-          value={weightText}
-          onChange={(event) => onDraftChange({ weight: event.target.value })}
-        />
-        <span className={styles.unit}>{fitnessStrings.session.weightUnit}</span>
-        <input
-          className={styles.reps}
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          aria-label={fitnessStrings.session.repsLabel(plannedSet.setNumber, exerciseName)}
-          value={repsText}
-          onChange={(event) => onDraftChange({ reps: event.target.value })}
-        />
-        <span className={styles.unit}>{fitnessStrings.session.repsUnit}</span>
-        <button
-          type="button"
-          className={styles.log}
-          aria-label={fitnessStrings.session.logLabel(plannedSet.setNumber, exerciseName)}
-          disabled={action.pending}
-          onClick={() => void log()}
-        >
-          {fitnessStrings.session.logSymbol}
-        </button>
-      </div>
-      <InlineError message={inputError ?? action.errorMessage} />
-    </div>
+    <>
+      <tr className={styles.row}>
+        <td className={styles.number}>{plannedSet.setNumber}</td>
+        <td className={styles.field}>
+          <input
+            className={styles.input}
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            aria-label={fitnessStrings.session.weightLabel(plannedSet.setNumber, exerciseName)}
+            placeholder={suggestedWeightText}
+            value={weightText}
+            onChange={(event) => onDraftChange({ weight: event.target.value })}
+          />
+        </td>
+        <td className={styles.field}>
+          <input
+            className={styles.input}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            aria-label={fitnessStrings.session.repsLabel(plannedSet.setNumber, exerciseName)}
+            value={repsText}
+            onChange={(event) => onDraftChange({ reps: event.target.value })}
+          />
+        </td>
+        <td className={styles.action}>
+          <button
+            type="button"
+            className={styles.log}
+            aria-label={fitnessStrings.session.logLabel(plannedSet.setNumber, exerciseName)}
+            disabled={action.pending}
+            onClick={() => void log()}
+          >
+            {fitnessStrings.session.logSymbol}
+          </button>
+        </td>
+      </tr>
+      {errorMessage === null ? null : (
+        <tr>
+          <td colSpan={columnCount}>
+            <InlineError message={errorMessage} />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

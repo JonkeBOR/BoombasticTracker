@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { type LucideIcon, Trash2 } from 'lucide-react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -17,7 +18,9 @@ describe('ConfirmDialog', () => {
     vi.restoreAllMocks();
   });
 
-  function renderDialog(overrides: { disabled?: boolean } = {}) {
+  function renderDialog(
+    overrides: { disabled?: boolean; triggerIcon?: LucideIcon; triggerVariant?: 'deleteIcon' } = {},
+  ) {
     const onConfirm = vi.fn();
     const view = render(
       <ConfirmDialog
@@ -78,5 +81,29 @@ describe('ConfirmDialog', () => {
 
     const trigger = screen.getByRole('button', { name: 'Remove block' });
     expect(trigger instanceof HTMLButtonElement && trigger.disabled).toBe(true);
+  });
+
+  it('shows a decorative icon in the trigger without changing its name', () => {
+    renderDialog({ triggerIcon: Trash2 });
+
+    const trigger = screen.getByRole('button', { name: 'Remove block' });
+    const icon = trigger.querySelector('svg');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('can be a trash can icon alone, named by its label', () => {
+    renderDialog({ triggerVariant: 'deleteIcon' });
+
+    const trigger = screen.getByRole('button', { name: 'Remove block' });
+    expect(trigger.textContent).toBe('');
+    expect(trigger.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    fireEvent.click(trigger);
+    expect(screen.getByText('Remove block 2?')).toBeDefined();
+  });
+
+  it('shows no icon unless one is given', () => {
+    renderDialog();
+
+    expect(screen.getByRole('button', { name: 'Remove block' }).querySelector('svg')).toBeNull();
   });
 });

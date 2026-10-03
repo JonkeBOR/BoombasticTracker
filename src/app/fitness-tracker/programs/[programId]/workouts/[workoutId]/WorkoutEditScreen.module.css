@@ -4,6 +4,14 @@
   gap: var(--space-2);
 }
 
+.headingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--tap-target-min);
+}
+
 .heading {
   margin: 0;
   font-size: var(--font-size-lg);
@@ -12,7 +20,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;

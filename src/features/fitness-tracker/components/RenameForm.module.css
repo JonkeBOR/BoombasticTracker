@@ -26,7 +26,6 @@
   font: inherit;
 }
 
-.toggle,
 .submit {
   min-height: var(--tap-target-min);
   padding-inline: var(--space-3);

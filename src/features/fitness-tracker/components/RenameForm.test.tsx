@@ -20,14 +20,9 @@ describe('RenameForm', () => {
     router.refresh.mockReset();
   });
 
-  function renderForm(overrides: { isCollapsible?: boolean } = {}) {
+  function renderForm() {
     render(
-      <RenameForm
-        label="Program name"
-        currentName="Strength"
-        url="/api/fitness/programs/p1"
-        {...overrides}
-      />,
+      <RenameForm label="Program name" currentName="Strength" url="/api/fitness/programs/p1" />,
     );
   }
 
@@ -75,15 +70,5 @@ describe('RenameForm', () => {
     fireEvent.click(screen.getByRole('button', { name: fitnessStrings.common.rename }));
 
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('can start collapsed and open on demand', () => {
-    renderForm({ isCollapsible: true });
-
-    expect(screen.queryByRole('textbox')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: fitnessStrings.common.rename }));
-
-    expect(screen.getByRole('textbox', { name: 'Program name' })).toBeDefined();
   });
 });

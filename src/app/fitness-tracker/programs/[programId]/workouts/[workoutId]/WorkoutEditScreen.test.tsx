@@ -2,17 +2,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { programFixture } from '@/features/fitness-tracker/components/test-fixtures';
 import type { WorkoutView } from '@/features/fitness-tracker/domain/types';
-import { fitnessStrings } from '@/lib/strings/fitness';
+import { fitnessErrorStrings, fitnessStrings } from '@/lib/strings/fitness';
 import { WorkoutEditScreen } from './WorkoutEditScreen';
 
-const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
-
-const exercises = [
-  { id: 'e1', name: 'Incline bench press', isArchived: false },
-  { id: 'e2', name: 'Curl', isArchived: false },
-];
 
 function fixtureWorkout(): WorkoutView {
   const found = programFixture().workouts[0];
@@ -40,17 +35,11 @@ describe('WorkoutEditScreen', () => {
     vi.unstubAllGlobals();
     fetchMock.mockReset();
     router.refresh.mockReset();
+    router.replace.mockReset();
   });
 
   function renderScreen(overrides: Partial<Parameters<typeof WorkoutEditScreen>[0]> = {}) {
-    return render(
-      <WorkoutEditScreen
-        programId="p1"
-        workout={fixtureWorkout()}
-        exercises={exercises}
-        {...overrides}
-      />,
-    );
+    return render(<WorkoutEditScreen programId="p1" workout={fixtureWorkout()} {...overrides} />);
   }
 
   function slotList() {
@@ -92,24 +81,21 @@ describe('WorkoutEditScreen', () => {
     const rows = within(slotList()).getAllByRole('listitem');
     expect(within(rows[0] as HTMLElement).queryByText(fitnessStrings.common.optional)).toBeNull();
     expect(within(rows[1] as HTMLElement).getByText(fitnessStrings.common.optional)).toBeDefined();
-    const optionalLink = within(rows[1] as HTMLElement).getByRole('link');
-    const regularLink = within(rows[0] as HTMLElement).getByRole('link');
-    expect(optionalLink.className).toMatch(/optional/);
-    expect(regularLink.className).not.toMatch(/optional/);
+    const optionalCard = within(rows[1] as HTMLElement).getByRole('link').parentElement;
+    const regularCard = within(rows[0] as HTMLElement).getByRole('link').parentElement;
+    expect(optionalCard?.className).toMatch(/optional/);
+    expect(regularCard?.className).not.toMatch(/optional/);
   });
 
-  it('moves a slot down one position', async () => {
+  it('gives every slot a reorder handle', () => {
     renderScreen();
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: fitnessStrings.common.moveDownFor('Incline bench press'),
+    const rows = within(slotList()).getAllByRole('listitem');
+    expect(
+      within(rows[0] as HTMLElement).getByRole('button', {
+        name: fitnessStrings.reorder.handleFor('Incline bench press'),
       }),
-    );
-
-    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/slots/s1');
-    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ toPosition: 2 }));
+    ).toBeDefined();
   });
 
   it('FR-038: removes a slot only after confirming', async () => {
@@ -136,11 +122,82 @@ describe('WorkoutEditScreen', () => {
     expect(screen.getByText(fitnessStrings.workoutEdit.noSlots)).toBeDefined();
   });
 
-  it('FR-028: offers the add-exercise form with the active exercises', () => {
+  it('FR-028: adds an exercise from a plus link beside the heading, not an inline form', () => {
     renderScreen();
 
-    const picker = screen.getByLabelText(fitnessStrings.workoutEdit.exerciseLabel);
-    expect(picker).toBeInstanceOf(HTMLSelectElement);
-    expect(screen.getByRole('button', { name: fitnessStrings.workoutEdit.save })).toBeDefined();
+    const add = screen.getByRole('link', { name: fitnessStrings.workoutEdit.addExercise });
+    expect(add.getAttribute('href')).toBe('/fitness-tracker/programs/p1/workouts/w1/slots/new');
+    expect(screen.queryByLabelText(fitnessStrings.workoutEdit.exerciseLabel)).toBeNull();
+  });
+
+  it('keeps the trash can and the reorder handle inside the slot card', () => {
+    renderScreen();
+
+    const row = within(slotList()).getAllByRole('listitem')[0] as HTMLElement;
+    const card = within(row).getByRole('link').parentElement as HTMLElement;
+    expect(
+      within(card)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label')),
+    ).toEqual([
+      fitnessStrings.workoutEdit.removeSlotFor('Incline bench press'),
+      fitnessStrings.reorder.handleFor('Incline bench press'),
+    ]);
+  });
+
+  describe('a new workout', () => {
+    it('asks for a name first and offers no exercises until the workout exists', () => {
+      renderScreen({ workout: null });
+
+      expect(
+        screen.getByRole('heading', { level: 1, name: fitnessStrings.workoutEdit.newTitle }),
+      ).toBeDefined();
+      const name = screen.getByRole('textbox', { name: fitnessStrings.workoutEdit.nameLabel });
+      expect(name instanceof HTMLInputElement && name.value).toBe('');
+      expect(screen.getByText(fitnessStrings.workoutEdit.nameFirst)).toBeDefined();
+      expect(screen.queryByLabelText(fitnessStrings.workoutEdit.exerciseLabel)).toBeNull();
+      expect(
+        screen.queryByRole('link', { name: fitnessStrings.workoutEdit.addExercise }),
+      ).toBeNull();
+      expect(
+        screen
+          .getByRole('link', { name: fitnessStrings.navigation.toProgram })
+          .getAttribute('href'),
+      ).toBe('/fitness-tracker/programs/p1');
+    });
+
+    it('creates the workout and replaces the page with its edit screen', async () => {
+      fetchMock.mockResolvedValue(Response.json({ id: 'w9' }, { status: 201 }));
+      renderScreen({ workout: null });
+
+      fireEvent.change(
+        screen.getByRole('textbox', { name: fitnessStrings.workoutEdit.nameLabel }),
+        { target: { value: 'Day 3' } },
+      );
+      fireEvent.click(screen.getByRole('button', { name: fitnessStrings.workoutEdit.create }));
+
+      await waitFor(() =>
+        expect(router.replace).toHaveBeenCalledWith('/fitness-tracker/programs/p1/workouts/w9'),
+      );
+      expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/programs/p1/workouts');
+      expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+      expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ name: 'Day 3' }));
+    });
+
+    it('FR-013: shows a refusal inline and stays on the page', async () => {
+      fetchMock.mockResolvedValue(Response.json({ error: 'name-taken' }, { status: 409 }));
+      renderScreen({ workout: null });
+
+      fireEvent.change(
+        screen.getByRole('textbox', { name: fitnessStrings.workoutEdit.nameLabel }),
+        { target: { value: 'Upper A' } },
+      );
+      fireEvent.click(screen.getByRole('button', { name: fitnessStrings.workoutEdit.create }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toBe(fitnessErrorStrings['name-taken']),
+      );
+      expect(router.replace).not.toHaveBeenCalled();
+    });
   });
 });

@@ -47,24 +47,24 @@ Codes accepted by every operation that takes the matching input: `not-found`, `n
 
 ## Program structure
 
-| Operation                                                                         | Returns                            | Refusals                                        | Spec                |
-| --------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------- | ------------------- |
-| `listPrograms(db, profileId)`                                                     | `ProgramSummary[]` with `isActive` | —                                               |                     |
-| `getProgram(db, profileId, programId)`                                            | `Program` (full tree)              | —                                               |                     |
-| `createProgram(db, profileId, { name, blockCount }, now)`                         | `Program`                          | `invalid-block-count`                           | FR-007              |
-| `renameProgram(db, profileId, programId, { name })`                               | `Program`                          | —                                               | FR-007              |
-| `deleteProgram(db, profileId, programId, now)`                                    | `void`                             | —                                               | FR-033, FR-034      |
-| `addTrainingBlock(db, profileId, programId, { label? })`                          | `Program`                          | —                                               | FR-010, R10         |
-| `labelTrainingBlock(db, profileId, blockId, { label })`                           | `Program`                          | —                                               | FR-008              |
-| `moveTrainingBlock(db, profileId, blockId, { toPosition })`                       | `Program`                          | `invalid-position`                              | R9                  |
-| `removeTrainingBlock(db, profileId, blockId, now)`                                | `Program`                          | `program-needs-a-block`                         | R9, FR-039          |
-| `addWorkout(db, profileId, programId, { name })`                                  | `Program`                          | —                                               | FR-009              |
-| `renameWorkout` / `moveWorkout` / `removeWorkout(…, now)`                         | `Program`                          | `invalid-position`                              | FR-009, FR-039      |
-| `addExerciseSlot(db, profileId, workoutId, { exerciseId, targetReps: number[] })` | `Program`                          | `exercise-archived`, `prescription-needs-a-set` | FR-009, FR-010, R10 |
-| `replaceSlotExercise(db, profileId, slotId, { exerciseId })`                      | `Program`                          | `exercise-archived`                             | rule 18, FR-037     |
-| `setSlotOptional(db, profileId, slotId, { isOptional })`                          | `Program`                          | —                                               | rule 20             |
-| `moveExerciseSlot` / `removeExerciseSlot`                                         | `Program`                          | `invalid-position`                              | FR-009              |
-| `setPrescription(db, profileId, slotId, blockId, { targetReps: number[] })`       | `Program`                          | `prescription-needs-a-set`                      | FR-011, FR-038, R10 |
+| Operation                                                                         | Returns                            | Refusals                                                                       | Spec                |
+| --------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ | ------------------- |
+| `listPrograms(db, profileId)`                                                     | `ProgramSummary[]` with `isActive` | —                                                                              |                     |
+| `getProgram(db, profileId, programId)`                                            | `Program` (full tree)              | —                                                                              |                     |
+| `createProgram(db, profileId, { name, blockCount }, now)`                         | `Program`                          | `invalid-block-count`                                                          | FR-007              |
+| `renameProgram(db, profileId, programId, { name })`                               | `Program`                          | —                                                                              | FR-007              |
+| `deleteProgram(db, profileId, programId, now)`                                    | `void`                             | —                                                                              | FR-033, FR-034      |
+| `addTrainingBlock(db, profileId, programId, { label? })`                          | `Program`                          | —                                                                              | FR-010, R10         |
+| `labelTrainingBlock(db, profileId, blockId, { label })`                           | `Program`                          | —                                                                              | FR-008              |
+| `moveTrainingBlock(db, profileId, blockId, { toPosition })`                       | `Program`                          | `invalid-position`                                                             | R9                  |
+| `removeTrainingBlock(db, profileId, blockId, now)`                                | `Program`                          | `program-needs-a-block`                                                        | R9, FR-039          |
+| `addWorkout(db, profileId, programId, { name })`                                  | `Program`                          | —                                                                              | FR-009              |
+| `renameWorkout` / `moveWorkout` / `removeWorkout(…, now)`                         | `Program`                          | `invalid-position`                                                             | FR-009, FR-039      |
+| `addExerciseSlot(db, profileId, workoutId, { exerciseId, targetReps: number[] })` | `Program`                          | `exercise-archived`, `exercise-already-in-workout`, `prescription-needs-a-set` | FR-009, FR-010, R10 |
+| `replaceSlotExercise(db, profileId, slotId, { exerciseId })`                      | `Program`                          | `exercise-archived`, `exercise-already-in-workout`                             | rule 18, FR-037     |
+| `setSlotOptional(db, profileId, slotId, { isOptional })`                          | `Program`                          | —                                                                              | rule 20             |
+| `moveExerciseSlot` / `removeExerciseSlot`                                         | `Program`                          | `invalid-position`                                                             | FR-009              |
+| `setPrescription(db, profileId, slotId, blockId, { targetReps: number[] })`       | `Program`                          | `prescription-needs-a-set`                                                     | FR-011, FR-038, R10 |
 
 ```ts
 type Program = {

@@ -1,5 +1,6 @@
 import 'server-only';
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, ne, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import type { Database } from '@/lib/server/database';
 import { canUseInSlot } from '../domain/exercise';
 import {
@@ -435,7 +436,9 @@ export async function addExerciseSlot(
   profileId: string,
   workoutId: string,
   input: { exerciseId: string; targetReps: number[] },
-): Promise<Result<Program, 'not-found' | 'exercise-archived' | TargetsError>> {
+): Promise<
+  Result<Program, 'not-found' | 'exercise-archived' | 'exercise-already-in-workout' | TargetsError>
+> {
   const programId = await programIdOfWorkout(db, profileId, workoutId);
   if (programId === null) {
     return fail('not-found');
@@ -448,10 +451,6 @@ export async function addExerciseSlot(
   if (!exercise) {
     return fail('not-found');
   }
-  const usable = canUseInSlot({ isArchived: exercise.archivedAt !== null });
-  if (!usable.ok) {
-    return fail(usable.error);
-  }
   const [blocks, existingSlots] = await Promise.all([
     db
       .select({ id: trainingBlocks.id })
@@ -459,10 +458,17 @@ export async function addExerciseSlot(
       .where(eq(trainingBlocks.programId, programId))
       .orderBy(asc(trainingBlocks.position)),
     db
-      .select({ id: exerciseSlots.id })
+      .select({ id: exerciseSlots.id, exerciseId: exerciseSlots.exerciseId })
       .from(exerciseSlots)
       .where(eq(exerciseSlots.workoutId, workoutId)),
   ]);
+  const usable = canUseInSlot({
+    isArchived: exercise.archivedAt !== null,
+    isInWorkout: existingSlots.some((slot) => slot.exerciseId === input.exerciseId),
+  });
+  if (!usable.ok) {
+    return fail(usable.error);
+  }
   const slotId = crypto.randomUUID();
   const drafts = draftsForNewSlot(
     slotId,
@@ -607,7 +613,7 @@ export async function replaceSlotExercise(
   profileId: string,
   slotId: string,
   input: { exerciseId: string },
-): Promise<Result<Program, 'not-found' | 'exercise-archived'>> {
+): Promise<Result<Program, 'not-found' | 'exercise-archived' | 'exercise-already-in-workout'>> {
   const programId = await programIdOfSlot(db, profileId, slotId);
   if (programId === null) {
     return fail('not-found');
@@ -620,7 +626,23 @@ export async function replaceSlotExercise(
   if (!exercise) {
     return fail('not-found');
   }
-  const usable = canUseInSlot({ isArchived: exercise.archivedAt !== null });
+  const siblings = alias(exerciseSlots, 'sibling_slots');
+  const sameExerciseElsewhere = await db
+    .select({ id: siblings.id })
+    .from(exerciseSlots)
+    .innerJoin(siblings, eq(siblings.workoutId, exerciseSlots.workoutId))
+    .where(
+      and(
+        eq(exerciseSlots.id, slotId),
+        ne(siblings.id, slotId),
+        eq(siblings.exerciseId, input.exerciseId),
+      ),
+    )
+    .limit(1);
+  const usable = canUseInSlot({
+    isArchived: exercise.archivedAt !== null,
+    isInWorkout: sameExerciseElsewhere.length > 0,
+  });
   if (!usable.ok) {
     return fail(usable.error);
   }

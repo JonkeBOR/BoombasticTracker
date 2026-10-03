@@ -3,33 +3,28 @@ import { exercisesAvailableFor } from '@/features/fitness-tracker/domain/exercis
 import { listExercises } from '@/features/fitness-tracker/server/exercises';
 import { requireFitnessContext } from '@/features/fitness-tracker/server/page-context';
 import { getProgram } from '@/features/fitness-tracker/server/programs';
-import { SlotEditScreen } from './SlotEditScreen';
+import { AddSlotScreen } from './AddSlotScreen';
 
-type SlotEditPageProps = {
-  params: Promise<{ programId: string; workoutId: string; slotId: string }>;
-};
+type AddSlotPageProps = { params: Promise<{ programId: string; workoutId: string }> };
 
-export default async function SlotEditPage({ params }: SlotEditPageProps) {
-  const { programId, workoutId, slotId } = await params;
+export default async function AddSlotPage({ params }: AddSlotPageProps) {
+  const { programId, workoutId } = await params;
   const { db, profileId } = await requireFitnessContext(
-    `/fitness-tracker/programs/${programId}/workouts/${workoutId}/slots/${slotId}`,
+    `/fitness-tracker/programs/${programId}/workouts/${workoutId}/slots/new`,
   );
   const program = await getProgram(db, profileId, programId);
   const workout = program.ok
     ? program.value.workouts.find((candidate) => candidate.id === workoutId)
     : undefined;
-  const slot = workout?.slots.find((candidate) => candidate.id === slotId);
-  if (!program.ok || !workout || !slot) {
+  if (!workout) {
     notFound();
   }
   const exercises = await listExercises(db, profileId, { includeArchived: false });
   return (
-    <SlotEditScreen
+    <AddSlotScreen
       programId={programId}
       workoutId={workoutId}
-      slot={slot}
-      blocks={program.value.blocks}
-      exercises={exercisesAvailableFor(exercises, workout.slots, slot.id)}
+      exercises={exercisesAvailableFor(exercises, workout.slots)}
     />
   );
 }

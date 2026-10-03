@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import { ConfirmActionButton } from './ConfirmActionButton';
@@ -12,6 +13,7 @@ export function DeleteExerciseButton({ exerciseId }: DeleteExerciseButtonProps) 
   return (
     <ConfirmActionButton
       triggerLabel={fitnessStrings.exerciseEdit.delete}
+      triggerIcon={Trash2}
       message={fitnessStrings.exerciseEdit.deleteConfirm}
       confirmLabel={fitnessStrings.exerciseEdit.deleteConfirmLabel}
       method="DELETE"

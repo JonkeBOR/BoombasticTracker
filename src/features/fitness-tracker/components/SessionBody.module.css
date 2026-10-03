@@ -33,12 +33,37 @@
 }
 
 .sets {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 var(--space-1);
+}
+
+.setColumn,
+.column,
+.logColumn {
+  padding: 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: start;
+}
+
+.setColumn {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.logColumn {
+  width: var(--tap-target-min);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .empty {

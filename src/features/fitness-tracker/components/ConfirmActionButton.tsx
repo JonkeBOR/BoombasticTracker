@@ -1,5 +1,6 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { InlineError } from './InlineError';
 import styles from './ConfirmActionButton.module.css';
@@ -9,6 +10,7 @@ type Method = 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 type ConfirmActionButtonProps = {
   triggerLabel: string;
+  triggerIcon?: LucideIcon;
   message: string;
   confirmLabel: string;
   method: Method;
@@ -20,6 +22,7 @@ type ConfirmActionButtonProps = {
 
 export function ConfirmActionButton({
   triggerLabel,
+  triggerIcon,
   message,
   confirmLabel,
   method,
@@ -34,6 +37,7 @@ export function ConfirmActionButton({
     <span className={styles.wrapper}>
       <ConfirmDialog
         triggerLabel={triggerLabel}
+        triggerIcon={triggerIcon}
         message={message}
         confirmLabel={confirmLabel}
         disabled={disabled || action.pending}

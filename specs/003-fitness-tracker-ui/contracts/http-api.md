@@ -36,21 +36,21 @@ Components (research R1). Every endpoint is a `route.ts` under `src/app/api/fitn
 
 ## Programs and their structure
 
-| Method | Path                                              | Body                                                     | 200      | Refusals                                                                       |
-| ------ | ------------------------------------------------- | -------------------------------------------------------- | -------- | ------------------------------------------------------------------------------ |
-| POST   | `/api/fitness/programs`                           | `{ name, blockCount }`                                   | `{ id }` | `name-*`, `invalid-block-count`                                                |
-| PATCH  | `/api/fitness/programs/[id]`                      | `{ name }`                                               | `{}`     | `name-*`, `not-found`                                                          |
-| DELETE | `/api/fitness/programs/[id]`                      | —                                                        | `{}`     | `not-found`, `program-active`                                                  |
-| POST   | `/api/fitness/programs/[id]/blocks`               | `{}`                                                     | `{}`     | `not-found`                                                                    |
-| PATCH  | `/api/fitness/blocks/[id]`                        | `{ label: string \| null }`                              | `{}`     | `not-found`                                                                    |
-| DELETE | `/api/fitness/blocks/[id]`                        | —                                                        | `{}`     | `not-found`, `program-needs-a-block`                                           |
-| POST   | `/api/fitness/programs/[id]/workouts`             | `{ name }`                                               | `{ id }` | `name-*`, `not-found`                                                          |
-| PATCH  | `/api/fitness/workouts/[id]`                      | `{ name }` or `{ toPosition }`                           | `{}`     | `name-*`, `invalid-position`, `not-found`                                      |
-| DELETE | `/api/fitness/workouts/[id]`                      | —                                                        | `{}`     | `not-found`                                                                    |
-| POST   | `/api/fitness/workouts/[id]/slots`                | `{ exerciseId, sets, reps }`                             | `{ id }` | `not-found`, `exercise-archived`, `prescription-needs-a-set`, `invalid-target` |
-| PATCH  | `/api/fitness/slots/[id]`                         | `{ exerciseId }` or `{ isOptional }` or `{ toPosition }` | `{}`     | `not-found`, `exercise-archived`, `invalid-position`                           |
-| DELETE | `/api/fitness/slots/[id]`                         | —                                                        | `{}`     | `not-found`                                                                    |
-| PUT    | `/api/fitness/slots/[id]/prescriptions/[blockId]` | `{ targetReps: number[] }`                               | `{}`     | `not-found`, `prescription-needs-a-set`, `invalid-target`                      |
+| Method | Path                                              | Body                                                     | 200      | Refusals                                                                                                      |
+| ------ | ------------------------------------------------- | -------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/fitness/programs`                           | `{ name, blockCount }`                                   | `{ id }` | `name-*`, `invalid-block-count`                                                                               |
+| PATCH  | `/api/fitness/programs/[id]`                      | `{ name }`                                               | `{}`     | `name-*`, `not-found`                                                                                         |
+| DELETE | `/api/fitness/programs/[id]`                      | —                                                        | `{}`     | `not-found`, `program-active`                                                                                 |
+| POST   | `/api/fitness/programs/[id]/blocks`               | `{}`                                                     | `{}`     | `not-found`                                                                                                   |
+| PATCH  | `/api/fitness/blocks/[id]`                        | `{ label: string \| null }`                              | `{}`     | `not-found`                                                                                                   |
+| DELETE | `/api/fitness/blocks/[id]`                        | —                                                        | `{}`     | `not-found`, `program-needs-a-block`                                                                          |
+| POST   | `/api/fitness/programs/[id]/workouts`             | `{ name }`                                               | `{ id }` | `name-*`, `not-found`                                                                                         |
+| PATCH  | `/api/fitness/workouts/[id]`                      | `{ name }` or `{ toPosition }`                           | `{}`     | `name-*`, `invalid-position`, `not-found`                                                                     |
+| DELETE | `/api/fitness/workouts/[id]`                      | —                                                        | `{}`     | `not-found`                                                                                                   |
+| POST   | `/api/fitness/workouts/[id]/slots`                | `{ exerciseId, sets, reps }`                             | `{ id }` | `not-found`, `exercise-archived`, `exercise-already-in-workout`, `prescription-needs-a-set`, `invalid-target` |
+| PATCH  | `/api/fitness/slots/[id]`                         | `{ exerciseId }` or `{ isOptional }` or `{ toPosition }` | `{}`     | `not-found`, `exercise-archived`, `exercise-already-in-workout`, `invalid-position`                           |
+| DELETE | `/api/fitness/slots/[id]`                         | —                                                        | `{}`     | `not-found`                                                                                                   |
+| PUT    | `/api/fitness/slots/[id]/prescriptions/[blockId]` | `{ targetReps: number[] }`                               | `{}`     | `not-found`, `prescription-needs-a-set`, `invalid-target`                                                     |
 
 - **`program-active`** is checked by the handler: the screen never offers Delete for the active program
   (FR-033), and the handler refuses it too, so an old page can't do it either. The domain's

@@ -101,6 +101,23 @@ describe('WorkoutSessionScreen', () => {
     return screen.getByRole('region', { name: new RegExp(exerciseName) });
   }
 
+  function loggedRow(setNumber: number, exerciseName = bench): HTMLElement {
+    const row = within(section(exerciseName))
+      .getByText(fitnessStrings.session.loggedLabel(setNumber))
+      .closest('tr');
+    if (!row) {
+      throw new Error('The logged set is not in a table row');
+    }
+    return row;
+  }
+
+  function loggedCells(setNumber: number, exerciseName = bench): (string | null)[] {
+    return within(loggedRow(setNumber, exerciseName))
+      .getAllByRole('cell')
+      .slice(0, 3)
+      .map((cell) => cell.textContent);
+  }
+
   it('shows the workout name with the block', () => {
     render(<WorkoutSessionScreen session={freshSession()} />);
 
@@ -113,13 +130,28 @@ describe('WorkoutSessionScreen', () => {
   });
 
   describe('the sets', () => {
-    it('FR-017: lists the exercises in slot order, one row per planned set with its target', () => {
+    it('FR-017: shows each exercise as a table with set, weight and reps columns, one row per planned set', () => {
       render(<WorkoutSessionScreen session={freshSession()} />);
 
-      const bench = section('Incline bench press');
-      expect(within(bench).getAllByText(fitnessStrings.session.target(12))).toHaveLength(2);
-      expect(within(bench).getByText(fitnessStrings.session.target(10))).toBeDefined();
-      expect(within(section('Curl')).getByText(fitnessStrings.session.target(12))).toBeDefined();
+      const table = within(section('Incline bench press')).getByRole('table', { name: bench });
+      expect(
+        within(table)
+          .getAllByRole('columnheader')
+          .map((header) => header.textContent),
+      ).toEqual([
+        fitnessStrings.session.columns.set,
+        fitnessStrings.session.columns.weight,
+        fitnessStrings.session.columns.reps,
+        fitnessStrings.session.columns.log,
+      ]);
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      expect(bodyRows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual([
+        '1',
+        '2',
+        '3',
+      ]);
+      expect(within(section('Curl')).getAllByRole('row')).toHaveLength(2);
+      expect(screen.queryByText(fitnessStrings.slotEdit.setNumber(1))).toBeNull();
     });
 
     it('US1 scenario 2: suggests the last weight as a placeholder and prefills the reps from the target', () => {
@@ -256,11 +288,17 @@ describe('WorkoutSessionScreen', () => {
   });
 
   describe('a logged set', () => {
-    it('FR-019: shows the logged values as text with a mark, and no inputs or button', () => {
+    it('FR-019: keeps the row, tinted, with the logged values as text, and no inputs or button', () => {
       render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
 
-      expect(screen.getByText(fitnessStrings.session.loggedLabel(1))).toBeDefined();
-      expect(screen.getByText(fitnessStrings.session.loggedValues(12, '65'))).toBeDefined();
+      expect(loggedCells(1)).toEqual(['1', '65', '12']);
+      expect(loggedRow(1).className).toMatch(/logged/);
+      expect(within(loggedRow(1)).getByText(fitnessStrings.session.loggedLabel(1))).toBeDefined();
+      expect(
+        within(section('Incline bench press'))
+          .getAllByRole('row')
+          .filter((row) => /logged/.test(row.className)),
+      ).toHaveLength(1);
       expect(
         screen.queryByRole('textbox', { name: fitnessStrings.session.weightLabel(1, bench) }),
       ).toBeNull();
@@ -291,7 +329,7 @@ describe('WorkoutSessionScreen', () => {
         />,
       );
 
-      expect(screen.getByText(fitnessStrings.session.loggedValues(8, null))).toBeDefined();
+      expect(loggedCells(1)).toEqual(['1', fitnessStrings.common.noValue, '8']);
     });
 
     it('formats the logged weight without trailing zeros', () => {
@@ -309,7 +347,7 @@ describe('WorkoutSessionScreen', () => {
         />,
       );
 
-      expect(screen.getByText(fitnessStrings.session.loggedValues(10, '62.5'))).toBeDefined();
+      expect(loggedCells(1)[1]).toBe('62.5');
     });
   });
 
