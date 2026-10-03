@@ -68,7 +68,13 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await page.getByRole('button', { name: fitnessStrings.session.finishWorkout }).click();
   await expect(page.getByText(fitnessStrings.block.programComplete)).toBeVisible();
 
-  await page.getByRole('button', { name: new RegExp(workoutName) }).click();
+  await page
+    .getByRole('navigation', { name: fitnessStrings.tabBar.label })
+    .getByRole('button', { name: fitnessStrings.tabBar.workout })
+    .click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: new RegExp(workoutName) }),
+  ).toBeVisible();
   await expect(
     page.getByRole('textbox', { name: fitnessStrings.session.weightLabel(1) }),
   ).toHaveAttribute('placeholder', '42.5');

@@ -282,6 +282,29 @@ export async function startWorkout(
   return succeed(session.value);
 }
 
+export async function startUpcomingWorkout(
+  db: Database,
+  profileId: string,
+  now: Date,
+): Promise<
+  Result<
+    SessionView,
+    | 'no-active-program'
+    | 'program-incomplete'
+    | 'workout-not-in-active-program'
+    | 'workout-already-finished'
+  >
+> {
+  const overview = await getTrainingOverview(db, profileId);
+  if (!overview) {
+    return fail('no-active-program');
+  }
+  if (overview.suggestedWorkoutId === null) {
+    return fail('program-incomplete');
+  }
+  return startWorkout(db, profileId, overview.suggestedWorkoutId, now);
+}
+
 export async function logSet(
   db: Database,
   profileId: string,

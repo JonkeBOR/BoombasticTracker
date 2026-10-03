@@ -410,6 +410,11 @@ which ones the slot picker offers.
     nothing.
   - Set logs already stored are not changed. New set logs record the pass counter in their context, where they
     used to record the cycle number, so history can still be grouped by block across passes.
+- **FR-046**: Every fitness tracker screen MUST show a bottom tab bar with three icon tabs: Home
+  (`/fitness-tracker`), Current block (`/fitness-tracker/active/block`) and Next workout. Next workout opens the
+  session of the current block's suggested workout, resuming it when it is open and starting it otherwise; with
+  no active program it opens the current block view, which sends the user home. The tab of the current screen
+  MUST be marked as current.
 
 ### Key Entities _(include if feature involves data)_
 

@@ -10,7 +10,7 @@ import {
   respond,
   respondWith,
 } from '../http';
-import { finishWorkout, getSession, logSet, startWorkout } from '../training';
+import { finishWorkout, getSession, logSet, startUpcomingWorkout, startWorkout } from '../training';
 
 export async function handleStartSession({
   db,
@@ -19,6 +19,16 @@ export async function handleStartSession({
   params,
 }: FitnessRequestContext): Promise<Response> {
   return respondWith(await startWorkout(db, profileId, params.id ?? '', now), (session) => ({
+    sessionId: session.id,
+  }));
+}
+
+export async function handleStartUpcomingSession({
+  db,
+  profileId,
+  now,
+}: FitnessRequestContext): Promise<Response> {
+  return respondWith(await startUpcomingWorkout(db, profileId, now), (session) => ({
     sessionId: session.id,
   }));
 }

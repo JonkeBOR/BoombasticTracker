@@ -117,13 +117,14 @@ Activating the program that is already active returns its current cycle and chan
 
 ## Training
 
-| Operation                                                                  | Returns                                                            | Refusals                                                                         | Spec                        |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- | --------------------------- |
-| `getTrainingOverview(db, profileId)`                                       | `TrainingOverview \| null` (null when nothing is active)           | —                                                                                | rule 10, FR-025             |
-| `startWorkout(db, profileId, workoutId, now)`                              | `SessionView`                                                      | `no-active-program`, `workout-not-in-active-program`, `workout-already-finished` | rule 10, FR-024             |
-| `getSession(db, profileId, sessionId)`                                     | `SessionView`                                                      | —                                                                                | rule 14, FR-028             |
-| `logSet(db, profileId, sessionId, plannedSetId, { reps, weightKg? }, now)` | `SetLog`                                                           | `session-not-in-progress`, `planned-set-not-in-session`                          | rules 15–16, FR-029, FR-030 |
-| `finishWorkout(db, profileId, sessionId, now)`                             | `{ progression: 'none' \| 'block-advanced' \| 'cycle-completed' }` | `session-not-in-progress`                                                        | rules 6–7, 12, FR-027       |
+| Operation                                                                  | Returns                                                            | Refusals                                                                         | Spec                                                         |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `getTrainingOverview(db, profileId)`                                       | `TrainingOverview \| null` (null when nothing is active)           | —                                                                                | rule 10, FR-025                                              |
+| `startWorkout(db, profileId, workoutId, now)`                              | `SessionView`                                                      | `no-active-program`, `workout-not-in-active-program`, `workout-already-finished` | rule 10, FR-024                                              |
+| `startUpcomingWorkout(db, profileId, now)`                                 | `SessionView`                                                      | `no-active-program`, `program-incomplete`, plus those of `startWorkout`          | the suggested workout of the current block (spec 003 FR-046) |
+| `getSession(db, profileId, sessionId)`                                     | `SessionView`                                                      | —                                                                                | rule 14, FR-028                                              |
+| `logSet(db, profileId, sessionId, plannedSetId, { reps, weightKg? }, now)` | `SetLog`                                                           | `session-not-in-progress`, `planned-set-not-in-session`                          | rules 15–16, FR-029, FR-030                                  |
+| `finishWorkout(db, profileId, sessionId, now)`                             | `{ progression: 'none' \| 'block-advanced' \| 'cycle-completed' }` | `session-not-in-progress`                                                        | rules 6–7, 12, FR-027                                        |
 
 ```ts
 type TrainingOverview = {

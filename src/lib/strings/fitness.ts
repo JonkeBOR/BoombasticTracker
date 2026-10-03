@@ -24,6 +24,12 @@ export const fitnessStrings = {
       `${name} dropped at position ${position} of ${count}.`,
     cancelled: (name: string) => `Reordering cancelled. ${name} is back in its place.`,
   },
+  tabBar: {
+    label: 'Fitness tracker',
+    home: 'Home',
+    block: 'Current block',
+    workout: 'Next workout',
+  },
   navigation: {
     toHome: 'Fitness Tracker',
     toPrograms: 'Programs',
