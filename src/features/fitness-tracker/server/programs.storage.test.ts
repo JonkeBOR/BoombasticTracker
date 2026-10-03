@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Program } from '../domain/types';
+import { activateProgram, pauseActiveProgram } from './activation';
 import { addExercise, archiveExercise } from './exercises';
 import { ensureProfile } from './profile';
 import {
@@ -10,15 +11,24 @@ import {
   createProgram,
   getProgram,
   labelTrainingBlock,
+  listPrograms,
   moveExerciseSlot,
   moveTrainingBlock,
   moveWorkout,
+  removeTrainingBlock,
+  removeWorkout,
   setPrescription,
   setSlotOptional,
 } from './programs';
-import { plannedSets } from './schema';
+import { plannedSets, setLogs, workoutSessions } from './schema';
 import { openTestDatabase, type TestDatabase } from './storage-test-database';
-import { expectOk } from './storage-test-support';
+import {
+  activeOverview,
+  createProgramFromSpec,
+  expectOk,
+  type ProgramSpec,
+} from './storage-test-support';
+import { finishWorkout, logSet, startWorkout } from './training';
 
 function targetsByBlock(program: Program, workoutIndex: number, slotIndex: number): number[][] {
   const slot = program.workouts[workoutIndex]?.slots[slotIndex];
@@ -183,8 +193,8 @@ describe('program structure', () => {
     expect(program).toMatchObject({
       name: '5/3/1',
       isActive: false,
-      activeCycle: null,
       workouts: [],
+      cycle: { pass: 1 },
     });
     expect(program.blocks.map((block) => [block.number, block.label])).toEqual([
       [1, null],
@@ -324,5 +334,274 @@ describe('program structure', () => {
       ok: false,
       error: 'invalid-position',
     });
+  });
+  it('FR-025, FR-041: lists each program with its number of blocks and workouts', async () => {
+    const { db } = testDatabase;
+    const big = expectOk(await createProgram(db, profileId, { name: 'Big', blockCount: 3 }, now));
+    expectOk(await addWorkout(db, profileId, big.id, { name: 'Upper' }));
+    expectOk(await addWorkout(db, profileId, big.id, { name: 'Lower' }));
+    expectOk(
+      await createProgram(
+        db,
+        profileId,
+        { name: 'Small', blockCount: 1 },
+        new Date(now.getTime() + 1000),
+      ),
+    );
+    const otherProfileId = (await ensureProfile(db, crypto.randomUUID(), now)).id;
+    const foreign = expectOk(
+      await createProgram(db, otherProfileId, { name: 'Foreign', blockCount: 5 }, now),
+    );
+    expectOk(await addWorkout(db, otherProfileId, foreign.id, { name: 'Other' }));
+
+    const summaries = await listPrograms(db, profileId);
+
+    expect(
+      summaries.map((summary) => [summary.name, summary.blockCount, summary.workoutCount]),
+    ).toEqual([
+      ['Big', 3, 2],
+      ['Small', 1, 0],
+    ]);
+  });
+});
+
+describe.each(['active', 'paused'] as const)(
+  'editing a %s program in the middle of a pass',
+  (mode) => {
+    let testDatabase: TestDatabase;
+    let profileId: string;
+    let clock: number;
+
+    beforeAll(async () => {
+      testDatabase = await openTestDatabase();
+    });
+
+    afterAll(async () => {
+      await testDatabase.dispose();
+    });
+
+    beforeEach(async () => {
+      clock = Date.parse('2026-10-01T08:00:00Z');
+      profileId = (await ensureProfile(testDatabase.db, crypto.randomUUID(), tick())).id;
+    });
+
+    function tick(): Date {
+      clock += 60_000;
+      return new Date(clock);
+    }
+
+    const fourBlocksOneWorkout: ProgramSpec = {
+      blockCount: 4,
+      workouts: [{ name: 'Only', slots: [{ exercise: 'Squat', targetReps: [5] }] }],
+    };
+
+    async function activateAndTrain(spec: ProgramSpec, finishedBlocks: number): Promise<Program> {
+      const { db } = testDatabase;
+      const program = await createProgramFromSpec(db, profileId, spec, tick());
+      expectOk(await activateProgram(db, profileId, program.id, tick()));
+      for (let block = 0; block < finishedBlocks; block += 1) {
+        const session = expectOk(
+          await startWorkout(db, profileId, program.workouts[0]?.id ?? '', tick()),
+        );
+        expectOk(await finishWorkout(db, profileId, session.id, tick()));
+      }
+      if (mode === 'paused') {
+        expectOk(await pauseActiveProgram(db, profileId, tick()));
+      }
+      return program;
+    }
+
+    async function reload(program: Program): Promise<Program> {
+      return expectOk(await getProgram(testDatabase.db, profileId, program.id));
+    }
+
+    function numberOf(program: Program, blockId: string): number | undefined {
+      return program.blocks.find((block) => block.id === blockId)?.number;
+    }
+
+    it('FR-043: removing a block before the current one keeps the user on the same block', async () => {
+      const { db } = testDatabase;
+      const program = await activateAndTrain(fourBlocksOneWorkout, 2);
+      const currentBlockId = program.blocks[2]?.id ?? '';
+      expect((await reload(program)).cycle.currentBlockId).toBe(currentBlockId);
+
+      expectOk(await removeTrainingBlock(db, profileId, program.blocks[0]?.id ?? '', tick()));
+
+      const edited = await reload(program);
+      expect(edited.cycle).toMatchObject({ currentBlockId, pass: 1 });
+      expect(numberOf(edited, currentBlockId)).toBe(2);
+      if (mode === 'active') {
+        const overview = await activeOverview(db, profileId);
+        expect(overview.currentBlock).toMatchObject({ id: currentBlockId, number: 2 });
+        expect(overview.blocks.map((block) => block.status)).toEqual([
+          'complete',
+          'current',
+          'upcoming',
+        ]);
+      }
+    });
+
+    it('FR-043: removing the current block moves to the block that followed it, with none of its workouts finished', async () => {
+      const { db } = testDatabase;
+      const program = await activateAndTrain(fourBlocksOneWorkout, 1);
+      const sessionsBefore = await db
+        .select()
+        .from(workoutSessions)
+        .where(eq(workoutSessions.profileId, profileId));
+
+      expectOk(await removeTrainingBlock(db, profileId, program.blocks[1]?.id ?? '', tick()));
+
+      const edited = await reload(program);
+      expect(edited.cycle).toMatchObject({ currentBlockId: program.blocks[2]?.id, pass: 1 });
+      expect(numberOf(edited, program.blocks[2]?.id ?? '')).toBe(2);
+      if (mode === 'active') {
+        const overview = await activeOverview(db, profileId);
+        expect(overview.workouts.map((workout) => workout.status)).toEqual(['not-started']);
+        expect(overview.suggestedWorkoutId).toBe(program.workouts[0]?.id);
+      }
+      expect(
+        await db.select().from(workoutSessions).where(eq(workoutSessions.profileId, profileId)),
+      ).toEqual(sessionsBefore);
+    });
+
+    it('FR-043: removing the current block when it is the last starts a new pass at the first block', async () => {
+      const { db } = testDatabase;
+      const program = await activateAndTrain(fourBlocksOneWorkout, 3);
+      expect((await reload(program)).cycle.currentBlockId).toBe(program.blocks[3]?.id);
+
+      expectOk(await removeTrainingBlock(db, profileId, program.blocks[3]?.id ?? '', tick()));
+
+      expect((await reload(program)).cycle).toMatchObject({
+        currentBlockId: program.blocks[0]?.id,
+        pass: 2,
+      });
+      expect(
+        await db.select().from(workoutSessions).where(eq(workoutSessions.profileId, profileId)),
+      ).toHaveLength(3);
+    });
+
+    it('FR-043: removing a block after the current one changes nothing', async () => {
+      const { db } = testDatabase;
+      const program = await activateAndTrain(fourBlocksOneWorkout, 1);
+
+      expectOk(await removeTrainingBlock(db, profileId, program.blocks[3]?.id ?? '', tick()));
+
+      expect((await reload(program)).cycle).toMatchObject({
+        currentBlockId: program.blocks[1]?.id,
+        pass: 1,
+      });
+    });
+
+    it('FR-043: moving blocks keeps the user on the same block', async () => {
+      const { db } = testDatabase;
+      const program = await activateAndTrain(fourBlocksOneWorkout, 1);
+
+      expectOk(
+        await moveTrainingBlock(db, profileId, program.blocks[1]?.id ?? '', { toPosition: 1 }),
+      );
+
+      const edited = await reload(program);
+      expect(edited.cycle.currentBlockId).toBe(program.blocks[1]?.id);
+      expect(numberOf(edited, program.blocks[1]?.id ?? '')).toBe(1);
+    });
+
+    it('FR-039, FR-042: removing the only unfinished workout moves to the next block', async () => {
+      const { db } = testDatabase;
+      const program = await createProgramFromSpec(
+        db,
+        profileId,
+        {
+          blockCount: 3,
+          workouts: [
+            { name: 'Upper', slots: [{ exercise: 'Press', targetReps: [5] }] },
+            { name: 'Lower', slots: [{ exercise: 'Squat', targetReps: [5] }] },
+          ],
+        },
+        tick(),
+      );
+      expectOk(await activateProgram(db, profileId, program.id, tick()));
+      const session = expectOk(
+        await startWorkout(db, profileId, program.workouts[0]?.id ?? '', tick()),
+      );
+      expectOk(await finishWorkout(db, profileId, session.id, tick()));
+      if (mode === 'paused') {
+        expectOk(await pauseActiveProgram(db, profileId, tick()));
+      }
+
+      expectOk(await removeWorkout(db, profileId, program.workouts[1]?.id ?? '', tick()));
+
+      expect((await reload(program)).cycle).toMatchObject({
+        currentBlockId: program.blocks[1]?.id,
+        pass: 1,
+      });
+    });
+  },
+);
+
+describe('removing a workout that is in progress', () => {
+  let testDatabase: TestDatabase;
+  let profileId: string;
+  let clock: number;
+
+  beforeAll(async () => {
+    testDatabase = await openTestDatabase();
+  });
+
+  afterAll(async () => {
+    await testDatabase.dispose();
+  });
+
+  beforeEach(async () => {
+    clock = Date.parse('2026-10-01T08:00:00Z');
+    profileId = (await ensureProfile(testDatabase.db, crypto.randomUUID(), tick())).id;
+  });
+
+  function tick(): Date {
+    clock += 60_000;
+    return new Date(clock);
+  }
+
+  it('FR-042: closes its session as finished and keeps its set logs', async () => {
+    const { db } = testDatabase;
+    const program = await createProgramFromSpec(
+      db,
+      profileId,
+      {
+        blockCount: 2,
+        workouts: [
+          { name: 'Upper', slots: [{ exercise: 'Press', targetReps: [5] }] },
+          { name: 'Lower', slots: [{ exercise: 'Squat', targetReps: [5] }] },
+        ],
+      },
+      tick(),
+    );
+    expectOk(await activateProgram(db, profileId, program.id, tick()));
+    const session = expectOk(
+      await startWorkout(db, profileId, program.workouts[0]?.id ?? '', tick()),
+    );
+    expectOk(
+      await logSet(
+        db,
+        profileId,
+        session.id,
+        session.slots[0]?.plannedSets[0]?.id ?? '',
+        { reps: 5, weightKg: 60 },
+        tick(),
+      ),
+    );
+    const removedAt = tick();
+
+    expectOk(await removeWorkout(db, profileId, program.workouts[0]?.id ?? '', removedAt));
+
+    const [stored] = await db
+      .select()
+      .from(workoutSessions)
+      .where(eq(workoutSessions.id, session.id));
+    expect(stored).toMatchObject({ status: 'finished', finishedAt: removedAt });
+    expect(
+      await db.select().from(setLogs).where(eq(setLogs.workoutSessionId, session.id)),
+    ).toHaveLength(1);
+    const overview = await activeOverview(db, profileId);
+    expect(overview.workouts.map((workout) => workout.name)).toEqual(['Lower']);
   });
 });

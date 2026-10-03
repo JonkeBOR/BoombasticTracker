@@ -76,7 +76,7 @@ describe('atomic changes', () => {
     ).toHaveLength(1);
   });
 
-  it('SC-004: when the next cycle cannot be started, finishing the workout is rolled back too', async () => {
+  it('SC-004: when the new pass cannot be started, finishing the workout is rolled back too', async () => {
     const { db } = testDatabase;
     const profileId = (await ensureProfile(db, crypto.randomUUID(), now)).id;
     const program = await createProgramFromSpec(
@@ -92,8 +92,8 @@ describe('atomic changes', () => {
     const session = expectOk(await startWorkout(db, profileId, program.workouts[0]?.id ?? '', now));
 
     const failure = await failingWhile(
-      "CREATE TRIGGER test_block_new_cycle BEFORE INSERT ON cycles BEGIN SELECT RAISE(ABORT, 'forced failure'); END",
-      'test_block_new_cycle',
+      "CREATE TRIGGER test_block_new_pass BEFORE UPDATE ON cycles BEGIN SELECT RAISE(ABORT, 'forced failure'); END",
+      'test_block_new_pass',
       () => finishWorkout(db, profileId, session.id, now),
     );
 
@@ -104,10 +104,13 @@ describe('atomic changes', () => {
       .where(eq(workoutSessions.id, session.id));
     expect(stored).toMatchObject({ status: 'in_progress', finishedAt: null });
     const programCycles = await db.select().from(cycles).where(eq(cycles.programId, program.id));
-    expect(programCycles.map((cycle) => [cycle.number, cycle.status])).toEqual([[1, 'active']]);
+    expect(programCycles.map((cycle) => [cycle.pass, cycle.currentBlockId])).toEqual([
+      [1, program.blocks[0]?.id],
+    ]);
 
     expect(expectOk(await finishWorkout(db, profileId, session.id, now))).toEqual({
-      progression: 'cycle-completed',
+      progression: 'new-pass',
+      completedBlockNumber: 1,
     });
   });
 });

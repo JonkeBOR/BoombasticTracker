@@ -31,8 +31,8 @@ export function prefill(
 }
 
 export function decideLogSet(input: {
-  session: { status: SessionStatus; workoutId: string; blockNumber: number };
-  plannedSet: { slotWorkoutId: string; blockNumber: number };
+  session: { status: SessionStatus; workoutId: string; trainingBlockId: string };
+  plannedSet: { slotWorkoutId: string; trainingBlockId: string };
   input: { reps: number; weightKg?: number | null };
 }): Result<LogSetDecision, LogSetError> {
   const { session, plannedSet } = input;
@@ -41,7 +41,7 @@ export function decideLogSet(input: {
   }
   if (
     plannedSet.slotWorkoutId !== session.workoutId ||
-    plannedSet.blockNumber !== session.blockNumber
+    plannedSet.trainingBlockId !== session.trainingBlockId
   ) {
     return fail('planned-set-not-in-session');
   }
@@ -62,4 +62,24 @@ export function decideLogSet(input: {
     weightGrams: weightGrams.value,
     newLastWeightGrams: weightGrams.value,
   });
+}
+
+export function isPlannedSetLogged(
+  session: {
+    slots: readonly {
+      plannedSets: readonly { id: string; setNumber: number }[];
+      loggedSets: readonly { setNumber: number }[];
+    }[];
+  },
+  plannedSetId: string,
+): boolean {
+  const slot = session.slots.find((candidate) =>
+    candidate.plannedSets.some((plannedSet) => plannedSet.id === plannedSetId),
+  );
+  const plannedSet = slot?.plannedSets.find((candidate) => candidate.id === plannedSetId);
+  return (
+    slot !== undefined &&
+    plannedSet !== undefined &&
+    slot.loggedSets.some((logged) => logged.setNumber === plannedSet.setNumber)
+  );
 }

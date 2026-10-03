@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decideLogSet, prefill } from './logging';
+import { decideLogSet, isPlannedSetLogged, prefill } from './logging';
 
 describe('prefill', () => {
   it('rule 14: suggests the last weight in kilograms and nothing when there is none', () => {
@@ -18,8 +18,8 @@ describe('prefill', () => {
 });
 
 describe('decideLogSet', () => {
-  const session = { status: 'in_progress' as const, workoutId: 'w1', blockNumber: 2 };
-  const plannedSet = { slotWorkoutId: 'w1', blockNumber: 2 };
+  const session = { status: 'in_progress' as const, workoutId: 'w1', trainingBlockId: 'b2' };
+  const plannedSet = { slotWorkoutId: 'w1', trainingBlockId: 'b2' };
 
   it('rules 15 and 16: returns the reps and weight and the new last weight', () => {
     expect(decideLogSet({ session, plannedSet, input: { reps: 10, weightKg: 22.5 } })).toEqual({
@@ -51,7 +51,11 @@ describe('decideLogSet', () => {
       }),
     ).toEqual({ ok: false, error: 'planned-set-not-in-session' });
     expect(
-      decideLogSet({ session, plannedSet: { ...plannedSet, blockNumber: 1 }, input: { reps: 5 } }),
+      decideLogSet({
+        session,
+        plannedSet: { ...plannedSet, trainingBlockId: 'b1' },
+        input: { reps: 5 },
+      }),
     ).toEqual({ ok: false, error: 'planned-set-not-in-session' });
   });
 
@@ -64,5 +68,39 @@ describe('decideLogSet', () => {
       ok: false,
       error: 'invalid-weight',
     });
+  });
+});
+
+describe('isPlannedSetLogged', () => {
+  const session = {
+    slots: [
+      {
+        plannedSets: [
+          { id: 'p1', setNumber: 1 },
+          { id: 'p2', setNumber: 2 },
+        ],
+        loggedSets: [{ setNumber: 1 }],
+      },
+      {
+        plannedSets: [{ id: 'q1', setNumber: 1 }],
+        loggedSets: [],
+      },
+    ],
+  };
+
+  it('FR-019: is true for a planned set that has a set log in its slot', () => {
+    expect(isPlannedSetLogged(session, 'p1')).toBe(true);
+  });
+
+  it('FR-019: is false for a planned set of the same slot that has none', () => {
+    expect(isPlannedSetLogged(session, 'p2')).toBe(false);
+  });
+
+  it('FR-019: does not mix up the same set number in another slot', () => {
+    expect(isPlannedSetLogged(session, 'q1')).toBe(false);
+  });
+
+  it('is false for a planned set that is not in the session', () => {
+    expect(isPlannedSetLogged(session, 'other')).toBe(false);
   });
 });

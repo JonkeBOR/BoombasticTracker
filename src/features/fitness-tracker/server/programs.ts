@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '@/lib/server/database';
 import { canUseInSlot } from '../domain/exercise';
 import {
@@ -15,7 +15,7 @@ import { fail, type Result, succeed } from '../domain/result';
 import type { Program, ProgramSummary } from '../domain/types';
 import { parseName } from '../domain/values';
 import { chunkIds, chunkRows, runBatch, type Statement } from './batch';
-import { endCycleStatements, startCycleStatement } from './cycle-statements';
+import { insertCycleStatement, startPassStatements } from './cycle-statements';
 import { type ProgramRows, toProgram } from './mapping';
 import {
   cycles,
@@ -185,17 +185,38 @@ function reorderSlots(db: Database, workoutId: string, orderedIds: readonly stri
 }
 
 export async function listPrograms(db: Database, profileId: string): Promise<ProgramSummary[]> {
-  const rows = await db
-    .select({ id: programs.id, name: programs.name })
-    .from(programs)
-    .where(eq(programs.profileId, profileId))
-    .orderBy(asc(programs.createdAt), asc(programs.id));
-  const [profile] = await db
-    .select({ activeProgramId: profiles.activeProgramId })
-    .from(profiles)
-    .where(eq(profiles.id, profileId))
-    .limit(1);
-  return rows.map((row) => ({ ...row, isActive: profile?.activeProgramId === row.id }));
+  const [rows, blockCounts, workoutCounts, [profile]] = await Promise.all([
+    db
+      .select({ id: programs.id, name: programs.name })
+      .from(programs)
+      .where(eq(programs.profileId, profileId))
+      .orderBy(asc(programs.createdAt), asc(programs.id)),
+    db
+      .select({ programId: trainingBlocks.programId, total: count() })
+      .from(trainingBlocks)
+      .innerJoin(programs, eq(programs.id, trainingBlocks.programId))
+      .where(eq(programs.profileId, profileId))
+      .groupBy(trainingBlocks.programId),
+    db
+      .select({ programId: workouts.programId, total: count() })
+      .from(workouts)
+      .innerJoin(programs, eq(programs.id, workouts.programId))
+      .where(eq(programs.profileId, profileId))
+      .groupBy(workouts.programId),
+    db
+      .select({ activeProgramId: profiles.activeProgramId })
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .limit(1),
+  ]);
+  const totalOf = (counts: { programId: string; total: number }[], programId: string): number =>
+    counts.find((entry) => entry.programId === programId)?.total ?? 0;
+  return rows.map((row) => ({
+    ...row,
+    isActive: profile?.activeProgramId === row.id,
+    blockCount: totalOf(blockCounts, row.id),
+    workoutCount: totalOf(workoutCounts, row.id),
+  }));
 }
 
 export async function createProgram(
@@ -219,11 +240,16 @@ export async function createProgram(
     position: index + 1,
     label: null,
   }));
+  const firstBlockId = blockRows[0]?.id;
+  if (firstBlockId === undefined) {
+    throw new Error('A program needs at least one block');
+  }
   await runBatch(db, [
     db.insert(programs).values({ id: programId, profileId, name: name.value, createdAt: now }),
     ...chunkRows(blockRows, trainingBlockColumns).map((part) =>
       db.insert(trainingBlocks).values(part),
     ),
+    insertCycleStatement(db, programId, firstBlockId),
   ]);
   return getProgram(db, profileId, programId).then((found) => {
     if (!found.ok) {
@@ -611,54 +637,45 @@ export async function replaceSlotExercise(
   return getProgram(db, profileId, programId);
 }
 
-async function progressionAfterEdit(
+async function reevaluateProgramCycle(
   db: Database,
   programId: string,
-  remaining: { workoutIds: string[]; blockCount: number },
+  change: {
+    blockIdsBefore: readonly string[];
+    blockIdsAfter: readonly string[];
+    removedBlockId: string | null;
+    workoutIds: readonly string[];
+  },
   now: Date,
 ): Promise<Statement[]> {
-  const [cycle] = await db
-    .select()
-    .from(cycles)
-    .where(and(eq(cycles.programId, programId), eq(cycles.status, 'active')))
-    .limit(1);
-  if (!cycle) {
+  const [cycle] = await db.select().from(cycles).where(eq(cycles.programId, programId)).limit(1);
+  const firstBlockId = change.blockIdsAfter[0];
+  if (!cycle || firstBlockId === undefined) {
     return [];
   }
-  const block = Math.min(cycle.currentBlockNumber, remaining.blockCount);
   const finished = await db
     .select({ workoutId: workoutSessions.workoutId })
     .from(workoutSessions)
     .where(
       and(
         eq(workoutSessions.cycleId, cycle.id),
-        eq(workoutSessions.blockNumber, block),
+        eq(workoutSessions.pass, cycle.pass),
+        eq(workoutSessions.trainingBlockId, cycle.currentBlockId),
         eq(workoutSessions.status, 'finished'),
       ),
     );
   const decision = reevaluateAfterEdit({
-    cycle,
-    blockCount: remaining.blockCount,
-    workoutIds: remaining.workoutIds,
-    finishedWorkoutIdsInBlock: finished.map((row) => row.workoutId),
+    ...change,
+    currentBlockId: cycle.currentBlockId,
+    finishedWorkoutIdsInCurrentBlock: finished.map((row) => row.workoutId),
   });
   if (decision.kind === 'move') {
     return [
-      db
-        .update(cycles)
-        .set({ currentBlockNumber: decision.toBlockNumber })
-        .where(eq(cycles.id, cycle.id)),
+      db.update(cycles).set({ currentBlockId: decision.toBlockId }).where(eq(cycles.id, cycle.id)),
     ];
   }
-  if (decision.kind === 'complete') {
-    return [
-      ...endCycleStatements(
-        db,
-        { id: cycle.id, status: 'completed', currentBlockNumber: remaining.blockCount },
-        now,
-      ),
-      startCycleStatement(db, { programId, number: decision.newCycleNumber }, now),
-    ];
+  if (decision.kind === 'new-pass') {
+    return startPassStatements(db, { id: cycle.id, programId }, firstBlockId, now);
   }
   return [];
 }
@@ -688,10 +705,15 @@ export async function removeTrainingBlock(
   await runBatch(db, [
     db.delete(trainingBlocks).where(eq(trainingBlocks.id, blockId)),
     ...reorderBlocks(db, programId, remaining),
-    ...(await progressionAfterEdit(
+    ...(await reevaluateProgramCycle(
       db,
       programId,
-      { workoutIds: workoutRows.map((row) => row.id), blockCount: remaining.length },
+      {
+        blockIdsBefore: siblings.map((sibling) => sibling.id),
+        blockIdsAfter: remaining,
+        removedBlockId: blockId,
+        workoutIds: workoutRows.map((row) => row.id),
+      },
       now,
     )),
   ]);
@@ -717,16 +739,29 @@ export async function removeWorkout(
     db
       .select({ id: trainingBlocks.id })
       .from(trainingBlocks)
-      .where(eq(trainingBlocks.programId, programId)),
+      .where(eq(trainingBlocks.programId, programId))
+      .orderBy(asc(trainingBlocks.position)),
   ]);
+  const blockIds = blockRows.map((row) => row.id);
   const remaining = siblings.map((sibling) => sibling.id).filter((id) => id !== workoutId);
   await runBatch(db, [
+    db
+      .update(workoutSessions)
+      .set({ status: 'finished', finishedAt: now })
+      .where(
+        and(eq(workoutSessions.workoutId, workoutId), eq(workoutSessions.status, 'in_progress')),
+      ),
     db.delete(workouts).where(eq(workouts.id, workoutId)),
     ...reorderWorkouts(db, programId, remaining),
-    ...(await progressionAfterEdit(
+    ...(await reevaluateProgramCycle(
       db,
       programId,
-      { workoutIds: remaining, blockCount: blockRows.length },
+      {
+        blockIdsBefore: blockIds,
+        blockIdsAfter: blockIds,
+        removedBlockId: null,
+        workoutIds: remaining,
+      },
       now,
     )),
   ]);

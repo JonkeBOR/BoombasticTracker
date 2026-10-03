@@ -37,26 +37,35 @@ tests in `e2e/` that sign in by minting a session cookie, and a Playwright MCP b
 Sign-in exists: `/sign-in`, the `/api/auth/*` route handlers, and `src/lib/server/` (config,
 session cookie, Google sign-in). Every protected page calls `requireSession(path)`; there is no
 Proxy, which OpenNext cannot run. The landing page lists features from `src/lib/features.ts`, and
-the fitness tracker at `/fitness-tracker` is a placeholder. `wrangler.jsonc` configures the Worker
+the fitness tracker at `/fitness-tracker` is the app's first feature. `wrangler.jsonc` configures the Worker
 and the D1 binding. See
 [004-hosting-and-persistence.md](docs/architecture/004-hosting-and-persistence.md).
 
-The fitness domain exists, with no screens: Drizzle ORM and the eleven-table schema in
+The fitness tracker is built end to end. The domain is Drizzle ORM with an eleven-table schema in
 `src/features/fitness-tracker/server/schema.ts`, migrations generated into `migrations/`, pure rules
 in `src/features/fitness-tracker/domain/`, and server-only operations in
 `src/features/fitness-tracker/server/` that take a `Database` from `src/lib/server/database.ts` as
-their first argument. The contract those operations form is
-`specs/002-fitness-domain-model/contracts/fitness-operations.md`. See
-[006-domain-persistence.md](docs/architecture/006-domain-persistence.md).
+their first argument. Its screens are under `src/app/fitness-tracker/`: home with the daily weigh-in,
+the active program and its current block, the workout session, programs, program, workout and slot
+editing, and the exercise catalog. Pages read through the operations in Server Components. Writes go
+through JSON route handlers under `src/app/api/fitness/`, each a plain function in
+`src/features/fitness-tracker/server/handlers/` wrapped by `fitnessRoute`. Shared client pieces are in
+`src/features/fitness-tracker/components/`, and all text is in `src/lib/strings/fitness.ts`. A
+program has one cycle that only records where the user is (the current block and a pass counter), and
+history lives in the set logs. The contract of the operations is
+`specs/002-fitness-domain-model/contracts/fitness-operations.md`, as changed by
+`specs/003-fitness-tracker-ui/contracts/operations-delta.md`. See
+[006-domain-persistence.md](docs/architecture/006-domain-persistence.md) and
+[007-cycle-as-container-and-bff.md](docs/architecture/007-cycle-as-container-and-bff.md).
 
 Deployment is continuous: `.github/workflows/deploy.yml` runs the gate, the remote D1 migrations
 and the OpenNext build and deploy on every push to `main`. Merging is deploying. There is no local
 deploy script, because OpenNext bundles every `.env*` file into the Worker. See
 [005-continuous-deployment.md](docs/architecture/005-continuous-deployment.md).
 
-Not built yet: any fitness screen or route (the exercise catalog, program builder, training and
-profile and bodyweight features build on the domain), `src/components/`, and checks on pull
-requests. Those are created when they have a real occupant, not before.
+Not built yet: views of past passes, workouts and sessions, progress charts, bodyweight history,
+`src/components/`, and checks on pull requests. Those are created when they have a real occupant, not
+before.
 
 ## Commands
 

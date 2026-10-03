@@ -68,8 +68,7 @@ describe('training', () => {
     const session = await open(program.workouts[0]?.id ?? '');
 
     expect(session.status).toBe('in_progress');
-    expect(session.cycleNumber).toBe(1);
-    expect(session.blockNumber).toBe(1);
+    expect(session.block).toEqual({ id: program.blocks[0]?.id, number: 1, label: null });
     expect(
       session.slots[0]?.plannedSets.map((set) => [
         set.setNumber,
@@ -112,7 +111,7 @@ describe('training', () => {
       ],
     });
     const upperA = program.workouts[0];
-    const activeCycle = expectOk(await getProgram(db, profileId, program.id)).activeCycle;
+    const { cycle } = expectOk(await getProgram(db, profileId, program.id));
     const session = await open(upperA?.id ?? '');
     const targetSet = session.slots[0]?.plannedSets[1];
 
@@ -129,8 +128,8 @@ describe('training', () => {
     });
     expect(logged.context).toEqual({
       programId: program.id,
-      cycleId: activeCycle?.id,
-      cycleNumber: 1,
+      cycleId: cycle.id,
+      pass: 1,
       trainingBlockId: program.blocks[0]?.id,
       blockNumber: 1,
       workoutId: upperA?.id,
@@ -196,7 +195,8 @@ describe('training', () => {
       'not-started',
       'not-started',
     ]);
-    expect(overview?.block).toEqual({ number: 1, label: null, count: 2 });
+    expect(overview?.currentBlock).toMatchObject({ number: 1, label: null, isLast: false });
+    expect(overview?.blocks).toHaveLength(2);
     expect((await open(lowerB?.id ?? '')).status).toBe('in_progress');
     expect((await getTrainingOverview(db, profileId))?.workouts[3]?.status).toBe('in-progress');
   });
@@ -206,7 +206,7 @@ describe('training', () => {
     const program = await activeProgram(fourWorkouts);
     const session = await open(program.workouts[0]?.id ?? '');
 
-    expect(expectOk(await finishWorkout(db, profileId, session.id, now))).toEqual({
+    expect(expectOk(await finishWorkout(db, profileId, session.id, now))).toMatchObject({
       progression: 'none',
     });
 
@@ -333,24 +333,18 @@ describe('training', () => {
     });
     const session = await open(program.workouts[0]?.id ?? '');
     expect(session.slots).toEqual([]);
-    expect(expectOk(await finishWorkout(db, profileId, session.id, now))).toEqual({
+    expect(expectOk(await finishWorkout(db, profileId, session.id, now))).toMatchObject({
       progression: 'none',
     });
   });
 
-  it('rule 3: activating a program with no active cycle starts cycle 1 at block 1', async () => {
+  it('rule 3, FR-045: activating a program makes it active on its first block, in its first pass', async () => {
     const { db } = testDatabase;
     const program = await createProgramFromSpec(db, profileId, fourWorkouts, now);
 
     const cycle = expectOk(await activateProgram(db, profileId, program.id, now));
 
-    expect(cycle).toMatchObject({
-      number: 1,
-      status: 'active',
-      currentBlockNumber: 1,
-      startedAt: now,
-      endedAt: null,
-    });
+    expect(cycle).toMatchObject({ currentBlockId: program.blocks[0]?.id, pass: 1 });
     expect(expectOk(await getProgram(db, profileId, program.id)).isActive).toBe(true);
   });
 

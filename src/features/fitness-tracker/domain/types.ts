@@ -1,19 +1,12 @@
+import type { BlockStatus } from './progression';
+
 export type Profile = { id: string };
 
 export type Exercise = { id: string; name: string; isArchived: boolean };
 
-export type CycleStatus = 'active' | 'completed' | 'ended_early';
-
 export type SessionStatus = 'in_progress' | 'finished';
 
-export type Cycle = {
-  id: string;
-  number: number;
-  status: CycleStatus;
-  currentBlockNumber: number;
-  startedAt: Date;
-  endedAt: Date | null;
-};
+export type Cycle = { id: string; currentBlockId: string; pass: number };
 
 export type PlannedSetView = {
   id: string;
@@ -41,15 +34,21 @@ export type Program = {
   isActive: boolean;
   blocks: BlockView[];
   workouts: WorkoutView[];
-  activeCycle: Cycle | null;
+  cycle: Cycle;
 };
 
-export type ProgramSummary = { id: string; name: string; isActive: boolean };
+export type ProgramSummary = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  blockCount: number;
+  workoutCount: number;
+};
 
 export type SetLogContext = {
   programId: string;
   cycleId: string;
-  cycleNumber: number;
+  pass: number;
   trainingBlockId: string;
   blockNumber: number;
   workoutId: string;
@@ -90,17 +89,37 @@ export type SessionView = {
   startedAt: Date;
   finishedAt: Date | null;
   workout: { id: string; name: string };
-  cycleNumber: number;
-  blockNumber: number;
+  block: { id: string; number: number | null; label: string | null };
   slots: SessionSlot[];
 };
 
 export type WorkoutProgress = 'not-started' | 'in-progress' | 'finished';
 
+export type BlockProgress = {
+  id: string;
+  number: number;
+  label: string | null;
+  status: BlockStatus;
+  finishedCount: number;
+};
+
 export type TrainingOverview = {
   program: { id: string; name: string };
-  cycle: Cycle;
-  block: { number: number; label: string | null; count: number };
-  workouts: { id: string; name: string; status: WorkoutProgress }[];
+  currentBlock: { id: string; number: number; label: string | null; isLast: boolean };
+  blocks: BlockProgress[];
+  workoutCount: number;
+  workouts: {
+    id: string;
+    name: string;
+    status: WorkoutProgress;
+    sessionId: string | null;
+    finishedAt: Date | null;
+  }[];
   suggestedWorkoutId: string | null;
+};
+
+export type ExerciseUsage = {
+  exercise: Exercise;
+  slots: { programId: string; programName: string; workoutId: string; workoutName: string }[];
+  hasSetLogs: boolean;
 };

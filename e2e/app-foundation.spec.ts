@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { appStrings } from '@/lib/strings/app';
 import { authStrings } from '@/lib/strings/auth';
 import { featureStrings } from '@/lib/strings/features';
+import { fitnessStrings } from '@/lib/strings/fitness';
 import { signIn } from './session';
 
 const signInErrors = [
@@ -96,11 +97,15 @@ test.describe('landing page and features', () => {
   });
 });
 
-test.describe('fitness tracker placeholder', () => {
-  test('signed in, the fitness tracker shows its placeholder', async ({ page, context }) => {
+test.describe('fitness tracker home', () => {
+  test('signed in, the fitness tracker offers the weigh-in and the programs link', async ({
+    page,
+    context,
+  }) => {
     await signIn(context);
     await page.goto('/fitness-tracker');
 
-    await expect(page.getByText(featureStrings.fitnessTracker.placeholder)).toBeVisible();
+    await expect(page.getByRole('button', { name: fitnessStrings.home.weighIn })).toBeVisible();
+    await expect(page.getByRole('link', { name: fitnessStrings.home.programsLink })).toBeVisible();
   });
 });

@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { groupByBlockAcrossCycles } from '../domain/history';
+import { groupByBlockAcrossPasses } from '../domain/history';
 import { activateProgram } from './activation';
 import { addExercise } from './exercises';
 import { getExerciseHistory } from './history';
@@ -53,7 +53,7 @@ describe('performance', () => {
     expect(elapsedMs).toBeLessThan(1000);
   }, 120_000);
 
-  it('SC-006: one exercise history of 100,000 set logs, grouped by block across cycles, takes under 2 seconds', async () => {
+  it('SC-006: one exercise history of 100,000 set logs, grouped by block across passes, takes under 2 seconds', async () => {
     const { db } = testDatabase;
     const profileId = (await ensureProfile(db, crypto.randomUUID(), now)).id;
     const exerciseId = expectOk(await addExercise(db, profileId, { name: 'Squat' }, now)).id;
@@ -74,12 +74,12 @@ describe('performance', () => {
 
     const startedAt = performance.now();
     const history = expectOk(await getExerciseHistory(db, profileId, exerciseId));
-    const groups = groupByBlockAcrossCycles(history.setLogs);
+    const groups = groupByBlockAcrossPasses(history.setLogs);
     const elapsedMs = performance.now() - startedAt;
 
     expect(history.setLogs).toHaveLength(100_000);
     expect(groups.map((group) => group.blockNumber)).toEqual([1, 2, 3, 4]);
-    expect(groups[0]?.cycles.length).toBeGreaterThan(1);
+    expect(groups[0]?.passes.length).toBeGreaterThan(1);
     expect(elapsedMs).toBeLessThan(2000);
   }, 120_000);
 });

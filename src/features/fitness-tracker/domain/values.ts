@@ -23,6 +23,24 @@ export function gramsToKg(grams: number): number {
   return grams / gramsPerKilogram;
 }
 
+const kgInputPattern = /^(\d+([.,]\d{1,2})?|[.,]\d{1,2})$/;
+
+export function parseKgInput(text: string): Result<number | null, 'invalid-weight'> {
+  const trimmed = text.trim();
+  if (trimmed === '') {
+    return succeed(null);
+  }
+  if (!kgInputPattern.test(trimmed)) {
+    return fail('invalid-weight');
+  }
+  const kilograms = Number(trimmed.replace(',', '.'));
+  return parseWeightKg(kilograms).ok ? succeed(kilograms) : fail('invalid-weight');
+}
+
+export function formatKg(kilograms: number): string {
+  return String(Math.round(kilograms * 100) / 100);
+}
+
 function isWholeRepCount(value: number): boolean {
   return Number.isInteger(value) && value >= 1 && value <= maxReps;
 }
@@ -58,4 +76,28 @@ export function localDate(now: Date, timeZone: string): Result<string, 'invalid-
   } catch {
     return fail('invalid-time-zone');
   }
+}
+
+function decodeOrNull(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+export function resolveTimeZone(raw: string | undefined): string {
+  const decoded = raw === undefined ? null : decodeOrNull(raw);
+  if (decoded === null || decoded === '') {
+    return 'UTC';
+  }
+  return localDate(new Date(), decoded).ok ? decoded : 'UTC';
+}
+
+export function formatShortDate(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: resolveTimeZone(timeZone),
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
 }

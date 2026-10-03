@@ -1,4 +1,4 @@
-import { relations, sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 import {
   type AnySQLiteColumn,
   index,
@@ -8,7 +8,6 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-export const cycleStatuses = ['active', 'completed', 'ended_early'] as const;
 export const sessionStatuses = ['in_progress', 'finished'] as const;
 
 export const profiles = sqliteTable('profiles', {
@@ -116,18 +115,10 @@ export const cycles = sqliteTable(
     programId: text('program_id')
       .notNull()
       .references(() => programs.id, { onDelete: 'cascade' }),
-    number: integer('number').notNull(),
-    status: text('status', { enum: cycleStatuses }).notNull(),
-    currentBlockNumber: integer('current_block_number').notNull(),
-    startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
-    endedAt: integer('ended_at', { mode: 'timestamp_ms' }),
+    currentBlockId: text('current_block_id').notNull(),
+    pass: integer('pass').notNull(),
   },
-  (table) => [
-    uniqueIndex('cycles_program_number').on(table.programId, table.number),
-    uniqueIndex('cycles_one_active_per_program')
-      .on(table.programId)
-      .where(sql`status = 'active'`),
-  ],
+  (table) => [uniqueIndex('cycles_program').on(table.programId)],
 );
 
 export const workoutSessions = sqliteTable(
@@ -139,17 +130,18 @@ export const workoutSessions = sqliteTable(
       .references(() => profiles.id),
     programId: text('program_id').notNull(),
     cycleId: text('cycle_id').notNull(),
+    pass: integer('pass').notNull(),
+    trainingBlockId: text('training_block_id').notNull(),
     workoutId: text('workout_id').notNull(),
-    cycleNumber: integer('cycle_number').notNull(),
-    blockNumber: integer('block_number').notNull(),
     status: text('status', { enum: sessionStatuses }).notNull(),
     startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
     finishedAt: integer('finished_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
-    uniqueIndex('workout_sessions_cycle_block_workout').on(
+    uniqueIndex('workout_sessions_cycle_pass_block_workout').on(
       table.cycleId,
-      table.blockNumber,
+      table.pass,
+      table.trainingBlockId,
       table.workoutId,
     ),
   ],
@@ -175,7 +167,7 @@ export const setLogs = sqliteTable(
     workoutId: text('workout_id').notNull(),
     exerciseSlotId: text('exercise_slot_id').notNull(),
     workoutSessionId: text('workout_session_id').notNull(),
-    cycleNumber: integer('cycle_number').notNull(),
+    pass: integer('cycle_number').notNull(),
     blockNumber: integer('block_number').notNull(),
   },
   (table) => [
