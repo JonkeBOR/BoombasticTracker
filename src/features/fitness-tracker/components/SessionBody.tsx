@@ -3,7 +3,6 @@
 import { useId } from 'react';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import type { SessionSlot, SessionView, SetLog } from '../domain/types';
-import { FinishWorkoutBar } from './FinishWorkoutBar';
 import { SetRow } from './SetRow';
 import styles from './SessionBody.module.css';
 import { useSetDrafts } from './useSetDrafts';
@@ -79,8 +78,7 @@ function SlotSection({
 }
 
 export function SessionBody({ session }: SessionBodyProps) {
-  const { drafts, setDraft, clearDraft, clearAll } = useSetDrafts(session.id);
-  const hasLoggedSets = session.slots.some((slot) => slot.loggedSets.length > 0);
+  const { drafts, setDraft, clearDraft } = useSetDrafts(session.id);
 
   return (
     <>
@@ -98,11 +96,6 @@ export function SessionBody({ session }: SessionBodyProps) {
           />
         ))
       )}
-      <FinishWorkoutBar
-        sessionId={session.id}
-        hasLoggedSets={hasLoggedSets}
-        onFinished={clearAll}
-      />
     </>
   );
 }

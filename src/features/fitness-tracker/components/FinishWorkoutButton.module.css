@@ -1,0 +1,33 @@
+.wrapper {
+  display: inline-flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  max-width: 50%;
+  text-align: end;
+}
+
+.button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  padding: 0;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--font-size-lg);
+}
+
+.button:disabled {
+  opacity: 0.6;
+}
+
+.icon {
+  width: 1em;
+  height: 1em;
+}
