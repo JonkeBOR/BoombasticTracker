@@ -1,7 +1,7 @@
 'use client';
 
 import { type LucideIcon, Trash2 } from 'lucide-react';
-import { useRef } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import styles from './ConfirmDialog.module.css';
 
@@ -13,6 +13,7 @@ type ConfirmDialogProps = {
   triggerClassName?: string;
   triggerIcon?: LucideIcon;
   triggerVariant?: TriggerVariant;
+  triggerContent?: ReactNode;
   disabled?: boolean;
 };
 
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   triggerClassName,
   triggerIcon: TriggerIcon,
   triggerVariant = 'labelled',
+  triggerContent,
   disabled = false,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -51,11 +53,12 @@ export function ConfirmDialog({
         <button
           type="button"
           className={triggerClassName ?? styles.trigger}
+          aria-label={triggerContent === undefined ? undefined : triggerLabel}
           disabled={disabled}
           onClick={() => dialogRef.current?.showModal()}
         >
           {TriggerIcon ? <TriggerIcon className={styles.icon} aria-hidden="true" /> : null}
-          {triggerLabel}
+          {triggerContent ?? triggerLabel}
         </button>
       )}
       <dialog ref={dialogRef} className={styles.dialog}>

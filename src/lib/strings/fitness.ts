@@ -143,10 +143,8 @@ export const fitnessStrings = {
       skipped: 'Skipped',
     },
     editProgram: 'Edit program',
-    skipToBlock: 'Skip to block',
-    skipPickerLabel: 'Block to skip to',
-    skipChoose: 'Choose a block…',
-    skipStartAgain: 'Block 1 (start again)',
+    skipToFor: (blockTitle: string) => `Skip to ${blockTitle}`,
+    startAgainAtFor: (blockTitle: string) => `Start again at ${blockTitle}`,
     skipConfirmLabel: 'Skip',
     skipConfirmLater: (target: number, skippedFrom: number, skippedTo: number) =>
       skippedFrom === skippedTo

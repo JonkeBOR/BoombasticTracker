@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { PauseButton } from '@/features/fitness-tracker/components/PauseButton';
 import { Screen } from '@/features/fitness-tracker/components/Screen';
-import { SkipToBlockButton } from '@/features/fitness-tracker/components/SkipToBlockButton';
+import { SkipToBlockCard } from '@/features/fitness-tracker/components/SkipToBlockCard';
+import { decideSkip } from '@/features/fitness-tracker/domain/progression';
 import type { BlockProgress, TrainingOverview } from '@/features/fitness-tracker/domain/types';
 import { fitnessStrings } from '@/lib/strings/fitness';
 import styles from './ActiveProgramScreen.module.css';
@@ -22,8 +23,34 @@ function BlockSummary({ block, workoutCount }: { block: BlockProgress; workoutCo
   );
 }
 
+function skipMessage(
+  target: BlockProgress,
+  overview: TrainingOverview,
+  hasOpenWorkout: boolean,
+): string {
+  const base =
+    target.id === overview.blocks[0]?.id
+      ? fitnessStrings.activeProgram.skipConfirmStartAgain
+      : fitnessStrings.activeProgram.skipConfirmLater(
+          target.number,
+          overview.currentBlock.number,
+          target.number - 1,
+        );
+  return hasOpenWorkout ? `${base} ${fitnessStrings.activeProgram.skipOpenWorkout}` : base;
+}
+
+function skipLabel(target: BlockProgress, overview: TrainingOverview): string {
+  const title = fitnessStrings.block.title(target.number, target.label);
+  return target.id === overview.blocks[0]?.id
+    ? fitnessStrings.activeProgram.startAgainAtFor(title)
+    : fitnessStrings.activeProgram.skipToFor(title);
+}
+
 export function ActiveProgramScreen({ overview }: ActiveProgramScreenProps) {
   const hasOpenWorkout = overview.workouts.some((workout) => workout.status === 'in-progress');
+  const blockIds = overview.blocks.map((block) => block.id);
+  const canSkipTo = (block: BlockProgress) =>
+    decideSkip({ blockIds, currentBlockId: overview.currentBlock.id, targetBlockId: block.id }).ok;
 
   return (
     <Screen
@@ -40,6 +67,15 @@ export function ActiveProgramScreen({ overview }: ActiveProgramScreenProps) {
               <Link className={styles.current} href="/fitness-tracker/active/block">
                 <BlockSummary block={block} workoutCount={overview.workoutCount} />
               </Link>
+            ) : canSkipTo(block) ? (
+              <SkipToBlockCard
+                blockId={block.id}
+                label={skipLabel(block, overview)}
+                message={skipMessage(block, overview, hasOpenWorkout)}
+                className={styles.skippable}
+              >
+                <BlockSummary block={block} workoutCount={overview.workoutCount} />
+              </SkipToBlockCard>
             ) : (
               <div className={styles.other}>
                 <BlockSummary block={block} workoutCount={overview.workoutCount} />
@@ -48,11 +84,6 @@ export function ActiveProgramScreen({ overview }: ActiveProgramScreenProps) {
           </li>
         ))}
       </ul>
-      <SkipToBlockButton
-        blocks={overview.blocks}
-        currentBlockId={overview.currentBlock.id}
-        hasOpenWorkout={hasOpenWorkout}
-      />
       <div className={styles.actions}>
         <PauseButton
           triggerLabel={fitnessStrings.activeProgram.pause}

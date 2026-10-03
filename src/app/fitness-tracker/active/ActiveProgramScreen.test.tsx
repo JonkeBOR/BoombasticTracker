@@ -107,26 +107,44 @@ describe('ActiveProgramScreen', () => {
   });
 
   describe('skip to block', () => {
-    function picker(): HTMLSelectElement {
-      const element = screen.getByLabelText(fitnessStrings.activeProgram.skipPickerLabel);
-      if (!(element instanceof HTMLSelectElement)) {
-        throw new Error('The block picker is not a select');
-      }
-      return element;
+    function row(blockNumber: number): HTMLElement {
+      return within(blockList()).getAllByRole('listitem')[blockNumber - 1] as HTMLElement;
     }
 
-    it('US4 scenario 3, FR-040: offers every later block and block 1 to start again', () => {
+    function blockButton(blockNumber: number): HTMLElement {
+      return within(row(blockNumber)).getByRole('button');
+    }
+
+    function openDialog(): HTMLElement {
+      const dialog = document.querySelector<HTMLElement>('dialog[open]');
+      if (!dialog) {
+        throw new Error('No dialog is open');
+      }
+      return dialog;
+    }
+
+    it('US4 scenario 3, FR-040: every later block and block 1 can be tapped to skip, and there is no picker', () => {
       renderScreen();
 
-      expect([...picker().options].map((option) => option.text)).toEqual([
-        fitnessStrings.activeProgram.skipChoose,
-        fitnessStrings.block.title(3, null),
-        fitnessStrings.block.title(4, 'Peak'),
-        fitnessStrings.activeProgram.skipStartAgain,
-      ]);
+      expect(blockButton(1).textContent).toContain(fitnessStrings.block.title(1, null));
+      expect(blockButton(3).textContent).toContain(fitnessStrings.block.title(3, null));
+      expect(blockButton(4).textContent).toContain(fitnessStrings.block.title(4, 'Peak'));
+      expect(within(row(2)).queryByRole('button')).toBeNull();
+      expect(screen.queryByRole('combobox')).toBeNull();
     });
 
-    it('edge case: on the last block only block 1 is offered', () => {
+    it('names the action before the block for screen readers', () => {
+      renderScreen();
+
+      expect(blockButton(3).getAttribute('aria-label')).toBe(
+        fitnessStrings.activeProgram.skipToFor(fitnessStrings.block.title(3, null)),
+      );
+      expect(blockButton(1).getAttribute('aria-label')).toBe(
+        fitnessStrings.activeProgram.startAgainAtFor(fitnessStrings.block.title(1, null)),
+      );
+    });
+
+    it('edge case: on the last block only block 1 can be tapped', () => {
       renderScreen(
         overviewFixture({
           blocks: fourBlocks.map((block) =>
@@ -138,28 +156,15 @@ describe('ActiveProgramScreen', () => {
         }),
       );
 
-      expect([...picker().options].map((option) => option.text)).toEqual([
-        fitnessStrings.activeProgram.skipChoose,
-        fitnessStrings.activeProgram.skipStartAgain,
-      ]);
-    });
-
-    it('cannot skip until a block is chosen', () => {
-      renderScreen();
-
-      const trigger = screen.getByRole('button', {
-        name: fitnessStrings.activeProgram.skipToBlock,
-      });
-      expect(trigger instanceof HTMLButtonElement && trigger.disabled).toBe(true);
+      expect(blockButton(1)).toBeDefined();
+      expect(within(row(2)).queryByRole('button')).toBeNull();
+      expect(within(row(3)).queryByRole('button')).toBeNull();
     });
 
     it('FR-038: a later block asks which blocks are skipped and that logged sets are kept', async () => {
       renderScreen();
-      fireEvent.change(picker(), { target: { value: 'b4' } });
 
-      fireEvent.click(
-        screen.getByRole('button', { name: fitnessStrings.activeProgram.skipToBlock }),
-      );
+      fireEvent.click(blockButton(4));
       expect(
         screen.getByText(fitnessStrings.activeProgram.skipConfirmLater(4, 2, 3)),
       ).toBeDefined();
@@ -177,11 +182,8 @@ describe('ActiveProgramScreen', () => {
 
     it('names the one skipped block when only the current block is passed over', () => {
       renderScreen();
-      fireEvent.change(picker(), { target: { value: 'b3' } });
 
-      fireEvent.click(
-        screen.getByRole('button', { name: fitnessStrings.activeProgram.skipToBlock }),
-      );
+      fireEvent.click(blockButton(3));
 
       expect(
         screen.getByText(fitnessStrings.activeProgram.skipConfirmLater(3, 2, 2)),
@@ -190,13 +192,19 @@ describe('ActiveProgramScreen', () => {
 
     it('FR-038: starting again asks for confirmation too', () => {
       renderScreen();
-      fireEvent.change(picker(), { target: { value: 'b1' } });
 
-      fireEvent.click(
-        screen.getByRole('button', { name: fitnessStrings.activeProgram.skipToBlock }),
-      );
+      fireEvent.click(blockButton(1));
 
       expect(screen.getByText(fitnessStrings.activeProgram.skipConfirmStartAgain)).toBeDefined();
+    });
+
+    it('cancelling sends nothing', () => {
+      renderScreen();
+
+      fireEvent.click(blockButton(3));
+      fireEvent.click(screen.getByRole('button', { name: fitnessStrings.common.cancel }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('US4 scenario 8: mentions the open workout that will be finished', () => {
@@ -208,14 +216,11 @@ describe('ActiveProgramScreen', () => {
           ],
         }),
       );
-      fireEvent.change(picker(), { target: { value: 'b3' } });
 
-      fireEvent.click(
-        screen.getByRole('button', { name: fitnessStrings.activeProgram.skipToBlock }),
-      );
+      fireEvent.click(blockButton(3));
 
       expect(
-        screen.getByText(new RegExp(fitnessStrings.activeProgram.skipOpenWorkout)),
+        within(openDialog()).getByText(new RegExp(fitnessStrings.activeProgram.skipOpenWorkout)),
       ).toBeDefined();
     });
   });

@@ -184,8 +184,8 @@ block 1, pause, and reactivate, checking the active program and block views afte
    never been active.
 2. **Given** a program with no workouts, **When** the user tries to activate it, **Then** a message explains
    that it needs at least one workout, and nothing changes.
-3. **Given** a 4-block program on block 2, **When** the user chooses "Skip to block", **Then** the choices are
-   block 3, block 4, and block 1 (start again).
+3. **Given** a 4-block program on block 2, **Then** blocks 3, 4 and 1 (start again) can be tapped to skip to
+   them, each after a confirmation, and block 2 opens the block view.
 4. **Given** the user picks block 4 and confirms, **Then** block 4 is current, its first workout is suggested,
    blocks 2 and 3 are shown as skipped, and every logged set is kept.
 5. **Given** the user jumped to block 4, **When** the user opens its first workout, **Then** the sets are
@@ -229,7 +229,7 @@ which ones the slot picker offers.
 ### Edge Cases
 
 - **No exercises yet** when adding a slot: the picker offers to create one inline.
-- **Already on the last block**: "Skip to block" offers only block 1 (start again).
+- **Already on the last block**: only block 1 (start again) can be tapped to skip to.
 - **Removing the current block when it's the last block**: the program starts a new pass at block
   1, even if earlier blocks were skipped.
 - **Removing a block before the current one**: the user stays on the same block, now shown under its new
@@ -291,7 +291,8 @@ which ones the slot picker offers.
 - **FR-011**: The active program view MUST list every block of the program in order with its label, its
   progress ("3 / 4 workouts") and one status: complete, current, upcoming or skipped. A block before the
   current block that isn't complete is skipped. The current block MUST be highlighted.
-- **FR-012**: Only the current block MUST open the block view.
+- **FR-012**: Only the current block MUST open the block view. Tapping a block the user can skip to (a later
+  block, or block 1 to start again) MUST open the skip confirmation for it. Other blocks are not tappable.
 - **FR-013**: The block view MUST list the program's workouts in order, each finished (with its date), in
   progress or not started, and MUST highlight the suggested workout.
 - **FR-014**: Tapping any not-started workout in the current block MUST start it, and tapping an in-progress
