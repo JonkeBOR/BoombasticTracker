@@ -15,10 +15,24 @@
   align-items: flex-start;
 }
 
-.title {
+.title,
+.compactTitle {
   margin: 0;
   font-size: var(--font-size-xl);
   overflow-wrap: anywhere;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-self: stretch;
+}
+
+.compactTitle {
+  min-width: 0;
+  font-size: var(--font-size-lg);
 }
 
 .main {

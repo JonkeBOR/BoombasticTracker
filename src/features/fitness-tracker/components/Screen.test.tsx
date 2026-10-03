@@ -27,3 +27,16 @@ it('has no back link when it is given none', () => {
 
   expect(screen.queryByRole('link')).toBeNull();
 });
+
+it('shows an action beside the title when it is given one', () => {
+  render(
+    <Screen title="Day 1" back={null} action={<button type="button" aria-label="Finish" />}>
+      <p>{body}</p>
+    </Screen>,
+  );
+
+  const heading = screen.getByRole('heading', { level: 1, name: 'Day 1' });
+  expect(heading.parentElement?.contains(screen.getByRole('button', { name: 'Finish' }))).toBe(
+    true,
+  );
+});
