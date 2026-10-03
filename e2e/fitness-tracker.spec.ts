@@ -64,5 +64,5 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await page.getByRole('button', { name: new RegExp(workoutName) }).click();
   await expect(
     page.getByRole('textbox', { name: fitnessStrings.session.weightLabel(1) }),
-  ).toHaveValue('42.5');
+  ).toHaveAttribute('placeholder', '42.5');
 });

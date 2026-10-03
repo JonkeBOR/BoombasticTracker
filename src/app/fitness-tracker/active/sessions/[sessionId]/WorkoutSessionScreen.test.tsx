@@ -122,11 +122,12 @@ describe('WorkoutSessionScreen', () => {
       expect(within(section('Curl')).getByText(fitnessStrings.session.target(12))).toBeDefined();
     });
 
-    it('US1 scenario 2: prefills the weight from the last weight and the reps from the target', () => {
+    it('US1 scenario 2: suggests the last weight as a placeholder and prefills the reps from the target', () => {
       render(<WorkoutSessionScreen session={freshSession()} />);
 
-      expect(weightBox(1).value).toBe('65');
-      expect(weightBox(2).value).toBe('62.5');
+      expect(weightBox(1).value).toBe('');
+      expect(weightBox(1).placeholder).toBe('65');
+      expect(weightBox(2).placeholder).toBe('62.5');
       expect(repsBox(1).value).toBe('12');
       expect(repsBox(3).value).toBe('10');
     });
@@ -135,6 +136,7 @@ describe('WorkoutSessionScreen', () => {
       render(<WorkoutSessionScreen session={freshSession()} />);
 
       expect(weightBox(3).value).toBe('');
+      expect(weightBox(3).placeholder).toBe('');
     });
 
     it('FR-010: opens a decimal keypad for the weight and a numeric one for the reps', () => {
@@ -163,7 +165,7 @@ describe('WorkoutSessionScreen', () => {
   });
 
   describe('logging a set', () => {
-    it('US1 scenario 3, FR-005: one tap sends the prefilled values as they are', async () => {
+    it('US1 scenario 3, FR-005: one tap sends the suggested weight and the target reps', async () => {
       const session = freshSession();
       render(<WorkoutSessionScreen session={session} />);
 
@@ -323,7 +325,8 @@ describe('WorkoutSessionScreen', () => {
 
       expect(weightBox(2).value).toBe('70');
       expect(repsBox(2).value).toBe('8');
-      expect(weightBox(1).value).toBe('65');
+      expect(weightBox(1).value).toBe('');
+      expect(weightBox(1).placeholder).toBe('65');
     });
 
     it('drops the typed values of a set once it is logged', async () => {
@@ -336,7 +339,8 @@ describe('WorkoutSessionScreen', () => {
 
       render(<WorkoutSessionScreen session={session} />);
 
-      expect(weightBox(1).value).toBe('65');
+      expect(weightBox(1).value).toBe('');
+      expect(weightBox(1).placeholder).toBe('65');
     });
   });
 

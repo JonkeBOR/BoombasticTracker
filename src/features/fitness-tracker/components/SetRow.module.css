@@ -57,6 +57,11 @@
   width: 5rem;
 }
 
+.weight::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
 .reps {
   width: 4rem;
 }

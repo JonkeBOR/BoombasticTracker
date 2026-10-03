@@ -62,13 +62,13 @@ export function SetRow({
     );
   }
 
-  const weightText =
-    draft?.weight ??
-    (plannedSet.suggestedWeightKg === null ? '' : formatKg(plannedSet.suggestedWeightKg));
+  const suggestedWeightText =
+    plannedSet.suggestedWeightKg === null ? '' : formatKg(plannedSet.suggestedWeightKg);
+  const weightText = draft?.weight ?? '';
   const repsText = draft?.reps ?? String(plannedSet.targetReps);
 
   async function log() {
-    const weightKg = parseKgInput(weightText);
+    const weightKg = parseKgInput(weightText.trim() === '' ? suggestedWeightText : weightText);
     if (!weightKg.ok) {
       setInputError(fitnessErrorStrings['invalid-weight']);
       return;
@@ -106,6 +106,7 @@ export function SetRow({
           inputMode="decimal"
           autoComplete="off"
           aria-label={fitnessStrings.session.weightLabel(plannedSet.setNumber, exerciseName)}
+          placeholder={suggestedWeightText}
           value={weightText}
           onChange={(event) => onDraftChange({ weight: event.target.value })}
         />

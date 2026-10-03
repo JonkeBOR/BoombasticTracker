@@ -305,7 +305,8 @@ which ones the slot picker offers.
 
 - **FR-017**: The session view MUST show the workout name and block, then each exercise in slot order
   with one row per planned set of the session's block: set number, target ("12 reps"), a weight input
-  prefilled with the last weight (empty if none), a reps input prefilled with the target, and a log button.
+  showing the block's last weight as a muted placeholder (none if there is no last weight), a reps input
+  prefilled with the target, and a log button. Logging with the weight input empty uses the placeholder weight.
 - **FR-018**: Logging a set MUST take a single tap when the prefilled values are right, with no confirmation.
   The weight MAY be left empty.
 - **FR-019**: A logged set MUST switch to a read-only logged state, with no inputs. A planned set with a set log
