@@ -50,6 +50,7 @@ export const fitnessStrings = {
     weighIn: 'Weigh in',
     weighInInputLabel: 'Bodyweight in kg',
     lastEntry: (kg: string) => `Last entry: ${kg} kg`,
+    currentProgram: (programName: string) => `Current program: ${programName}`,
     noActiveProgram: 'No active program',
     chooseProgram: 'Choose a program to start training.',
   },
