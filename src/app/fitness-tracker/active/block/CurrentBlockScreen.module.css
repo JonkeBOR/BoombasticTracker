@@ -38,7 +38,7 @@
 }
 
 .suggested {
-  border-color: var(--color-accent);
+  composes: metalBorder from '../../../../features/fitness-tracker/components/MetalBorder.module.css';
   background-color: var(--color-highlight);
   color: var(--color-highlight-text);
 }

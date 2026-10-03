@@ -41,9 +41,29 @@
   border-radius: var(--radius-md);
 }
 
+.gradientDefinitions {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.metalShadow {
+  stop-color: var(--color-metal-shadow);
+}
+
+.metalBase {
+  stop-color: var(--color-metal-base);
+}
+
+.metalShine {
+  stop-color: var(--color-metal-shine);
+}
+
 .icon {
   width: 1.625rem;
   height: 1.625rem;
+  stroke: url(#fitness-tab-metal);
 }
 
 .tab[aria-current='page'] .icon {

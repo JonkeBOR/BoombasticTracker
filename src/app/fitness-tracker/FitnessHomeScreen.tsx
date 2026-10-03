@@ -22,7 +22,9 @@ function ActiveProgramCard({ overview }: { overview: TrainingOverview }) {
   const upNext = suggestedWorkoutName(overview);
   return (
     <Link className={styles.card} href="/fitness-tracker/active">
-      <span className={styles.programName}>{overview.program.name}</span>
+      <span className={styles.programName}>
+        {fitnessStrings.home.currentProgram(overview.program.name)}
+      </span>
       <span>
         {fitnessStrings.block.title(overview.currentBlock.number, overview.currentBlock.label)}
       </span>

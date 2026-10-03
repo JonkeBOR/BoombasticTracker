@@ -1,0 +1,28 @@
+.metalBorder {
+  position: relative;
+  isolation: isolate;
+}
+
+.metalBorder::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  padding: 2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    var(--color-metal-base) 0%,
+    var(--color-metal-shadow) 20%,
+    var(--color-metal-base) 35%,
+    var(--color-metal-shine) 47%,
+    var(--color-metal-base) 59%,
+    var(--color-metal-shadow) 80%,
+    var(--color-metal-base) 100%
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}

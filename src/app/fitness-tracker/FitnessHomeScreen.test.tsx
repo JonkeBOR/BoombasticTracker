@@ -90,6 +90,7 @@ describe('FitnessHomeScreen', () => {
 
       const card = screen.getByRole('link', { name: new RegExp('Strength') });
       expect(card.getAttribute('href')).toBe('/fitness-tracker/active');
+      expect(within(card).getByText(fitnessStrings.home.currentProgram('Strength'))).toBeDefined();
       expect(within(card).getByText(fitnessStrings.block.title(2, 'Deload'))).toBeDefined();
       expect(within(card).getByText(new RegExp('Lower A'))).toBeDefined();
     });

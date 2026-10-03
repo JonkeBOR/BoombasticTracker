@@ -45,6 +45,26 @@ export function FitnessTabBar() {
 
   return (
     <nav className={styles.bar} aria-label={fitnessStrings.tabBar.label}>
+      <svg className={styles.gradientDefinitions} aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient
+            id="fitness-tab-metal"
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="24"
+            y2="24"
+          >
+            <stop className={styles.metalBase} offset="0%" />
+            <stop className={styles.metalShadow} offset="20%" />
+            <stop className={styles.metalBase} offset="35%" />
+            <stop className={styles.metalShine} offset="47%" />
+            <stop className={styles.metalBase} offset="59%" />
+            <stop className={styles.metalShadow} offset="80%" />
+            <stop className={styles.metalBase} offset="100%" />
+          </linearGradient>
+        </defs>
+      </svg>
       <Link
         className={styles.tab}
         href={homeHref}

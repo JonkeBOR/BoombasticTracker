@@ -50,6 +50,7 @@ export const fitnessStrings = {
     weighIn: 'Weigh in',
     weighInInputLabel: 'Bodyweight in kg',
     lastEntry: (kg: string) => `Last entry: ${kg} kg`,
+    currentProgram: (programName: string) => `Current program: ${programName}`,
     noActiveProgram: 'No active program',
     chooseProgram: 'Choose a program to start training.',
   },
@@ -191,7 +192,6 @@ export const fitnessStrings = {
         ? `Log, set ${setNumber}`
         : `Log, set ${setNumber}, ${exerciseName}`,
     loggedLabel: (setNumber: number) => `Set ${setNumber} logged`,
-    logSymbol: '✓',
     columns: { set: 'Set', weight: 'Weight (kg)', reps: 'Reps', log: 'Log' },
     finishWorkout: 'Finish workout',
     finishEmptyConfirmLabel: 'Finish',
