@@ -43,11 +43,12 @@ export function SetRow({
   onLogged,
 }: SetRowProps) {
   const [inputError, setInputError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const action = useFitnessAction();
 
   if (logged) {
     return (
-      <tr className={styles.logged}>
+      <tr className={confirming ? `${styles.logged} ${styles.sweep}` : styles.logged}>
         <td className={styles.number}>{plannedSet.setNumber}</td>
         <td className={styles.value}>
           {logged.weightKg === null ? fitnessStrings.common.noValue : formatKg(logged.weightKg)}
@@ -83,6 +84,7 @@ export function SetRow({
       return;
     }
     setInputError(null);
+    setConfirming(true);
     const succeeded = await action.run('POST', `/api/fitness/sessions/${sessionId}/sets`, {
       plannedSetId: plannedSet.id,
       reps,
@@ -90,6 +92,8 @@ export function SetRow({
     });
     if (succeeded) {
       onLogged();
+    } else {
+      setConfirming(false);
     }
   }
 
@@ -97,7 +101,7 @@ export function SetRow({
     <>
       <tr className={styles.row}>
         <td className={styles.number}>{plannedSet.setNumber}</td>
-        <td className={styles.field}>
+        <td>
           <input
             className={styles.input}
             type="text"
@@ -109,7 +113,7 @@ export function SetRow({
             onChange={(event) => onDraftChange({ weight: event.target.value })}
           />
         </td>
-        <td className={styles.field}>
+        <td>
           <input
             className={styles.input}
             type="text"
@@ -123,7 +127,7 @@ export function SetRow({
         <td className={styles.action}>
           <button
             type="button"
-            className={styles.log}
+            className={confirming ? `${styles.log} ${styles.confirming}` : styles.log}
             aria-label={fitnessStrings.session.logLabel(plannedSet.setNumber, exerciseName)}
             disabled={action.pending}
             onClick={() => void log()}

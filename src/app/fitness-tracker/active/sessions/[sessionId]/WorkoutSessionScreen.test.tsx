@@ -395,7 +395,9 @@ describe('WorkoutSessionScreen', () => {
       fireEvent.click(finishButton());
 
       await waitFor(() =>
-        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block'),
+        expect(router.push).toHaveBeenCalledWith(
+          `/fitness-tracker/active/sessions/${session.id}/finished`,
+        ),
       );
       expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/fitness/sessions/${session.id}/finish`);
       expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
@@ -403,7 +405,8 @@ describe('WorkoutSessionScreen', () => {
 
     it('FR-022: asks first when no set is logged, and sends nothing until confirmed', async () => {
       fetchMock.mockResolvedValue(Response.json({ progression: 'none', completedBlockNumber: 2 }));
-      render(<WorkoutSessionScreen session={freshSession()} />);
+      const session = freshSession();
+      render(<WorkoutSessionScreen session={session} />);
 
       fireEvent.click(finishButton());
       expect(screen.getByText(fitnessStrings.session.finishEmptyConfirm)).toBeDefined();
@@ -413,20 +416,25 @@ describe('WorkoutSessionScreen', () => {
       );
 
       await waitFor(() =>
-        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block'),
+        expect(router.push).toHaveBeenCalledWith(
+          `/fitness-tracker/active/sessions/${session.id}/finished`,
+        ),
       );
     });
 
-    it('US1 scenario 7: goes to the block view with the completed block when it advanced', async () => {
+    it('US1 scenario 7: goes to the finished view with the completed block when it advanced', async () => {
       fetchMock.mockResolvedValue(
         Response.json({ progression: 'block-advanced', completedBlockNumber: 2 }),
       );
-      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+      const session = withFirstSetLogged(freshSession());
+      render(<WorkoutSessionScreen session={session} />);
 
       fireEvent.click(finishButton());
 
       await waitFor(() =>
-        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block?completed=2'),
+        expect(router.push).toHaveBeenCalledWith(
+          `/fitness-tracker/active/sessions/${session.id}/finished?completed=2`,
+        ),
       );
     });
 
@@ -434,12 +442,15 @@ describe('WorkoutSessionScreen', () => {
       fetchMock.mockResolvedValue(
         Response.json({ progression: 'new-pass', completedBlockNumber: 4 }),
       );
-      render(<WorkoutSessionScreen session={withFirstSetLogged(freshSession())} />);
+      const session = withFirstSetLogged(freshSession());
+      render(<WorkoutSessionScreen session={session} />);
 
       fireEvent.click(finishButton());
 
       await waitFor(() =>
-        expect(router.push).toHaveBeenCalledWith('/fitness-tracker/active/block?completed=4'),
+        expect(router.push).toHaveBeenCalledWith(
+          `/fitness-tracker/active/sessions/${session.id}/finished?completed=4`,
+        ),
       );
     });
 

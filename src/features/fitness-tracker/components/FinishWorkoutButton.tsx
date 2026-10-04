@@ -26,10 +26,11 @@ export function FinishWorkoutButton({ sessionId, hasLoggedSets }: FinishWorkoutB
     clearAll();
     const progression = readStringField(body, 'progression');
     const completedBlock = readNumberField(body, 'completedBlockNumber');
+    const finishedPage = `/fitness-tracker/active/sessions/${sessionId}/finished`;
     const destination =
       progression !== null && progression !== 'none' && completedBlock !== null
-        ? `/fitness-tracker/active/block?completed=${completedBlock}`
-        : '/fitness-tracker/active/block';
+        ? `${finishedPage}?completed=${completedBlock}`
+        : finishedPage;
     router.push(destination);
   }
 

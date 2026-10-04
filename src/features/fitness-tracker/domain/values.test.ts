@@ -4,6 +4,7 @@ import {
   formatShortDate,
   gramsToKg,
   localDate,
+  parseCompletedBlock,
   parseKgInput,
   parseLoggedReps,
   parseName,
@@ -160,5 +161,15 @@ describe('formatShortDate', () => {
 
   it('falls back to UTC for an unknown time zone', () => {
     expect(formatShortDate(lateEvening, 'Mars/Olympus')).toBe('1 Oct');
+  });
+});
+
+describe('parseCompletedBlock', () => {
+  it('reads a positive whole block number', () => {
+    expect(parseCompletedBlock('3')).toBe(3);
+  });
+
+  it.each([undefined, '', '0', '-1', '1.5', 'two'])('ignores %j', (value) => {
+    expect(parseCompletedBlock(value)).toBeNull();
   });
 });

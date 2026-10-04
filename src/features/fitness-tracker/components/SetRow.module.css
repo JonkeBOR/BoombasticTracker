@@ -29,10 +29,6 @@
   font-weight: 600;
 }
 
-.field {
-  width: 40%;
-}
-
 .input {
   width: 100%;
   min-height: var(--tap-target-min);
@@ -84,6 +80,58 @@
   border-color: var(--color-border);
   background-color: var(--color-surface-muted);
   color: var(--color-text-muted);
+}
+
+.log.confirming {
+  border-color: var(--color-success);
+  background-color: var(--color-success);
+  color: var(--color-on-accent);
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.sweep td {
+  background-color: transparent;
+}
+
+.sweep .action {
+  position: relative;
+}
+
+.sweep .action::before {
+  position: absolute;
+  z-index: -1;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 100cqi;
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--color-success) 14%, transparent);
+  content: '';
+  animation: sweep-fill 100ms ease-out;
+}
+
+@keyframes sweep-fill {
+  from {
+    clip-path: inset(
+      0 var(--space-1) 0 calc(100% - var(--space-1) - var(--tap-target-min)) round var(--radius-md)
+    );
+  }
+
+  to {
+    clip-path: inset(0 0 0 0 round var(--radius-md));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .log.confirming {
+    transition: none;
+  }
+
+  .sweep .action::before {
+    animation: none;
+  }
 }
 
 .visuallyHidden {
