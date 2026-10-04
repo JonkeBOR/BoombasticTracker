@@ -101,3 +101,8 @@ export function formatShortDate(date: Date, timeZone: string): string {
     month: 'short',
   }).format(date);
 }
+
+export function parseCompletedBlock(value: string | undefined): number | null {
+  const parsed = value === undefined ? Number.NaN : Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
+}

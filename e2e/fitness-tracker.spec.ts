@@ -66,6 +66,10 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
   await expect(page.getByText('42.5')).toBeVisible();
 
   await page.getByRole('button', { name: fitnessStrings.session.finishWorkout }).click();
+  await expect(page).toHaveURL(/\/finished/);
+  const affirmation = page.getByRole('heading', { level: 1 });
+  await expect(affirmation).toBeVisible();
+  expect(fitnessStrings.finished.affirmations).toContain(await affirmation.textContent());
   await expect(page.getByText(fitnessStrings.block.programComplete)).toBeVisible();
 
   await page

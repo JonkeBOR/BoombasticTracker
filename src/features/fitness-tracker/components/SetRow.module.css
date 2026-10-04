@@ -109,7 +109,7 @@
   border-radius: var(--radius-md);
   background-color: color-mix(in srgb, var(--color-success) 14%, transparent);
   content: '';
-  animation: sweep-fill 350ms ease-out;
+  animation: sweep-fill 100ms ease-out;
 }
 
 @keyframes sweep-fill {

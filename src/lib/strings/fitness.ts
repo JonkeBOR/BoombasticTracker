@@ -198,6 +198,19 @@ export const fitnessStrings = {
     finishEmptyConfirm: 'Finish without logging any sets?',
     nothingToLog: 'There is nothing to log in this workout.',
   },
+  finished: {
+    affirmations: [
+      'Well done!',
+      'Strong work!',
+      'Every rep counts.',
+      'Stronger than yesterday.',
+      'Consistency wins.',
+      'You showed up. That matters.',
+      'Progress made!',
+    ],
+    summary: (workoutName: string) => `${workoutName} is finished.`,
+    toBlock: (blockTitle: string) => `Go to ${blockTitle}`,
+  },
   exercises: {
     title: 'Exercises',
     nameLabel: 'New exercise name',
