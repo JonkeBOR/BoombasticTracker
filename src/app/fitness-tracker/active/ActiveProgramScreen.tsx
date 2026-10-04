@@ -14,9 +14,11 @@ const blocksHeadingId = 'active-blocks-heading';
 function BlockSummary({ block, workoutCount }: { block: BlockProgress; workoutCount: number }) {
   return (
     <>
-      <span className={styles.name}>{fitnessStrings.block.title(block.number, block.label)}</span>
-      <span className={styles.progress}>
-        {fitnessStrings.activeProgram.progress(block.finishedCount, workoutCount)}
+      <span className={styles.summary}>
+        <span className={styles.name}>{fitnessStrings.block.title(block.number, block.label)}</span>
+        <span className={styles.progress}>
+          {fitnessStrings.activeProgram.progress(block.finishedCount, workoutCount)}
+        </span>
       </span>
       <span className={styles.status}>{fitnessStrings.activeProgram.status[block.status]}</span>
     </>
