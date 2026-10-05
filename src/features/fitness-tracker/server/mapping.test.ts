@@ -116,6 +116,7 @@ describe('toProgram', () => {
             position: 2,
             exerciseId: 'e1',
             isOptional: true,
+            isPeriodized: false,
             exercise,
             plannedSets: [],
           },
@@ -125,6 +126,7 @@ describe('toProgram', () => {
             position: 1,
             exerciseId: 'e1',
             isOptional: false,
+            isPeriodized: true,
             exercise,
             plannedSets: [
               {
@@ -182,6 +184,13 @@ describe('toProgram', () => {
   it('gives a slot with no planned sets an empty prescription for every block', () => {
     const slot = toProgram(rows).workouts[0]?.slots[1];
     expect(slot?.prescriptions.map((prescription) => prescription.plannedSets)).toEqual([[], []]);
+  });
+
+  it('reports whether each slot is periodized', () => {
+    expect(toProgram(rows).workouts[0]?.slots.map((slot) => slot.isPeriodized)).toEqual([
+      true,
+      false,
+    ]);
   });
 
   it('reports the cycle and the active flag', () => {

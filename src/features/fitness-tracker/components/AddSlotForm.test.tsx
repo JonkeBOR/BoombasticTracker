@@ -117,7 +117,24 @@ describe('AddSlotForm', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/fitness/workouts/w1/slots');
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
-      JSON.stringify({ exerciseId: 'e1', sets: 3, reps: 10 }),
+      JSON.stringify({ exerciseId: 'e1', sets: 3, reps: 10, isPeriodized: false }),
+    );
+  });
+
+  it('adds the exercise as periodized when that is ticked', async () => {
+    fetchMock.mockResolvedValue(Response.json({ id: 's9' }));
+    render(<AddSlotForm workoutId="w1" exercises={exercises} doneHref={doneHref} />);
+    const periodized = input(fitnessStrings.workoutEdit.periodizedLabel);
+    expect(periodized.checked).toBe(false);
+
+    fireEvent.change(select(), { target: { value: 'e1' } });
+    fillSetsAndReps('5', '5');
+    fireEvent.click(periodized);
+    fireEvent.click(save());
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith(doneHref));
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({ exerciseId: 'e1', sets: 5, reps: 5, isPeriodized: true }),
     );
   });
 
@@ -141,7 +158,7 @@ describe('AddSlotForm', () => {
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ name: 'Seal rows' }));
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/fitness/workouts/w1/slots');
     expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(
-      JSON.stringify({ exerciseId: 'e9', sets: 4, reps: 8 }),
+      JSON.stringify({ exerciseId: 'e9', sets: 4, reps: 8, isPeriodized: false }),
     );
   });
 

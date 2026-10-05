@@ -81,6 +81,7 @@ export const exerciseSlots = sqliteTable(
       .notNull()
       .references(() => exercises.id, { onDelete: 'restrict' }),
     isOptional: integer('is_optional', { mode: 'boolean' }).notNull().default(false),
+    isPeriodized: integer('is_periodized', { mode: 'boolean' }).notNull().default(true),
   },
   (table) => [uniqueIndex('exercise_slots_workout_position').on(table.workoutId, table.position)],
 );

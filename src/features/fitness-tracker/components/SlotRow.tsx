@@ -31,7 +31,7 @@ export function SlotRow({ programId, workoutId, slot, dragHandle }: SlotRowProps
           {slot.isOptional ? (
             <span className={styles.tag}>{fitnessStrings.common.optional}</span>
           ) : null}
-          <span className={styles.summary}>{summarize(slot.prescriptions)}</span>
+          <span className={styles.summary}>{summarize(slot.prescriptions, slot.isPeriodized)}</span>
         </Link>
         <ConfirmDialog
           triggerVariant="deleteIcon"

@@ -28,6 +28,7 @@ export function AddSlotForm({ workoutId, exercises, doneHref }: AddSlotFormProps
   const [newName, setNewName] = useState('');
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
+  const [isPeriodized, setIsPeriodized] = useState(false);
   const [created, setCreated] = useState<Exercise[]>([]);
   const action = useFitnessAction();
 
@@ -71,7 +72,7 @@ export function AddSlotForm({ workoutId, exercises, doneHref }: AddSlotFormProps
     await action.run(
       'POST',
       `/api/fitness/workouts/${workoutId}/slots`,
-      { exerciseId, sets: setCount, reps: repCount },
+      { exerciseId, sets: setCount, reps: repCount, isPeriodized },
       () => router.replace(doneHref),
     );
   }
@@ -140,6 +141,15 @@ export function AddSlotForm({ workoutId, exercises, doneHref }: AddSlotFormProps
           />
         </div>
       </div>
+      <label className={styles.toggle}>
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={isPeriodized}
+          onChange={(event) => setIsPeriodized(event.target.checked)}
+        />
+        {fitnessStrings.workoutEdit.periodizedLabel}
+      </label>
       <button type="submit" className={styles.submit} disabled={!canSave}>
         {fitnessStrings.workoutEdit.save}
       </button>

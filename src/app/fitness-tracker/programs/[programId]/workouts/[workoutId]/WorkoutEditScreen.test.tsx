@@ -65,7 +65,7 @@ describe('WorkoutEditScreen', () => {
     expect(rows).toHaveLength(2);
     expect(within(rows[0] as HTMLElement).getByText('Incline bench press')).toBeDefined();
     expect(within(rows[0] as HTMLElement).getByText('3×12 · 3×10 · 2×8')).toBeDefined();
-    expect(within(rows[1] as HTMLElement).getByText('1×12 · 1×12 · 1×12')).toBeDefined();
+    expect(within(rows[1] as HTMLElement).getByText('1×12')).toBeDefined();
   });
 
   it('FR-027: each slot links to its edit page', () => {

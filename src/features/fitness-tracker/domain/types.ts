@@ -21,6 +21,7 @@ export type SlotView = {
   id: string;
   exercise: Exercise;
   isOptional: boolean;
+  isPeriodized: boolean;
   prescriptions: Prescription[];
 };
 
