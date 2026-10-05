@@ -285,6 +285,33 @@ describe('WorkoutSessionScreen', () => {
       );
       expect(router.refresh).toHaveBeenCalledTimes(1);
     });
+
+    it('shows the set as logged at once, before the server answers', () => {
+      fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.change(weightBox(1), { target: { value: '67,5' } });
+      fireEvent.click(logButton(1));
+
+      expect(loggedCells(1)).toEqual(['1', '67.5', '12']);
+      expect(
+        screen.queryByRole('button', { name: fitnessStrings.session.logLabel(1, bench) }),
+      ).toBeNull();
+    });
+
+    it('puts the inputs back, with the typed values and the message, when logging fails', async () => {
+      fetchMock.mockResolvedValue(Response.json({ error: 'unexpected' }, { status: 500 }));
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.change(weightBox(1), { target: { value: '70' } });
+      fireEvent.click(logButton(1));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toBe(fitnessErrorStrings.unexpected),
+      );
+      expect(weightBox(1).value).toBe('70');
+      expect(logButton(1)).toBeDefined();
+    });
   });
 
   describe('a logged set', () => {
