@@ -108,6 +108,7 @@ export function toProgram(rows: ProgramRows): Program {
         id: slot.id,
         exercise: toExercise(slot.exercise),
         isOptional: slot.isOptional,
+        isPeriodized: slot.isPeriodized,
         prescriptions: blocks.map((block) => ({
           blockId: block.id,
           plannedSets: slot.plannedSets

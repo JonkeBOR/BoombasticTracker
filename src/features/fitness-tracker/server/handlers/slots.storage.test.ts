@@ -375,4 +375,128 @@ describe('exercise slot handlers', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('periodization', () => {
+    async function withSlot(isPeriodized: boolean): Promise<{ program: Program; slotId: string }> {
+      const program = await createProgramFromSpec(
+        testDatabase.db,
+        profileId,
+        {
+          blockCount: 2,
+          workouts: [
+            { name: 'Day 1', slots: [{ exercise: 'Curl', targetReps: [12, 12], isPeriodized }] },
+          ],
+        },
+        now,
+      );
+      return { program, slotId: program.workouts[0]?.slots[0]?.id ?? '' };
+    }
+
+    function targetsOf(program: Program): number[][] {
+      return (
+        program.workouts[0]?.slots[0]?.prescriptions.map((prescription) =>
+          prescription.plannedSets.map((set) => set.targetReps),
+        ) ?? []
+      );
+    }
+
+    it('adds a slot as non-periodized unless asked otherwise', async () => {
+      const { program, workoutId } = await emptyWorkout(2);
+
+      await handleAddSlot(
+        context({
+          body: { exerciseId: await exerciseId('Curl'), sets: 3, reps: 12 },
+          params: { id: workoutId },
+        }),
+      );
+      await handleAddSlot(
+        context({
+          body: { exerciseId: await exerciseId('Squat'), sets: 5, reps: 5, isPeriodized: true },
+          params: { id: workoutId },
+        }),
+      );
+
+      expect((await reload(program)).workouts[0]?.slots.map((slot) => slot.isPeriodized)).toEqual([
+        false,
+        true,
+      ]);
+    });
+
+    it('turns periodization off with one sets × reps for every block', async () => {
+      const { program, slotId } = await withSlot(true);
+
+      const response = await handleUpdateSlot(
+        context({ body: { isPeriodized: false, sets: 3, reps: 8 }, params: { id: slotId } }),
+      );
+
+      expect(response.status).toBe(200);
+      const edited = await reload(program);
+      expect(edited.workouts[0]?.slots[0]?.isPeriodized).toBe(false);
+      expect(targetsOf(edited)).toEqual([
+        [8, 8, 8],
+        [8, 8, 8],
+      ]);
+    });
+
+    it('turns periodization on', async () => {
+      const { program, slotId } = await withSlot(false);
+
+      const response = await handleUpdateSlot(
+        context({ body: { isPeriodized: true }, params: { id: slotId } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect((await reload(program)).workouts[0]?.slots[0]?.isPeriodized).toBe(true);
+    });
+
+    it('answers 400 invalid-body when turning periodization off without sets and reps', async () => {
+      const { slotId } = await withSlot(true);
+
+      const response = await handleUpdateSlot(
+        context({ body: { isPeriodized: false }, params: { id: slotId } }),
+      );
+
+      expect(response.status).toBe(400);
+      expect(await jsonOf(response)).toEqual({ error: 'invalid-body' });
+    });
+
+    it('sets the one scheme of a non-periodized slot in every block', async () => {
+      const { program, slotId } = await withSlot(false);
+
+      const response = await handleUpdateSlot(
+        context({ body: { sets: 4, reps: 10 }, params: { id: slotId } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(targetsOf(await reload(program))).toEqual([
+        [10, 10, 10, 10],
+        [10, 10, 10, 10],
+      ]);
+    });
+
+    it('answers 409 slot-periodized for one scheme on a periodized slot', async () => {
+      const { slotId } = await withSlot(true);
+
+      const response = await handleUpdateSlot(
+        context({ body: { sets: 4, reps: 10 }, params: { id: slotId } }),
+      );
+
+      expect(response.status).toBe(409);
+      expect(await jsonOf(response)).toEqual({ error: 'slot-periodized' });
+    });
+
+    it('answers 409 slot-not-periodized for a block prescription on a non-periodized slot', async () => {
+      const { program, slotId } = await withSlot(false);
+
+      const response = await handleSetPrescription(
+        context({
+          body: { targetReps: [10] },
+          params: { id: slotId, blockId: program.blocks[1]?.id ?? '' },
+        }),
+      );
+
+      expect(response.status).toBe(409);
+      expect(await jsonOf(response)).toEqual({ error: 'slot-not-periodized' });
+    });
+  });
 });

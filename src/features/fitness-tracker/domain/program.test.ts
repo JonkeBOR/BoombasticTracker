@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  carriedWeightsBySet,
   draftsForNewBlock,
   draftsForNewSlot,
   isActivatable,
@@ -29,9 +30,51 @@ describe('draftsForNewBlock', () => {
         'b3',
       ),
     ).toEqual([
-      { exerciseSlotId: 's1', trainingBlockId: 'b3', setNumber: 1, targetReps: 12 },
-      { exerciseSlotId: 's1', trainingBlockId: 'b3', setNumber: 2, targetReps: 10 },
-      { exerciseSlotId: 's2', trainingBlockId: 'b3', setNumber: 1, targetReps: 8 },
+      {
+        exerciseSlotId: 's1',
+        trainingBlockId: 'b3',
+        setNumber: 1,
+        targetReps: 12,
+        lastWeightGrams: null,
+      },
+      {
+        exerciseSlotId: 's1',
+        trainingBlockId: 'b3',
+        setNumber: 2,
+        targetReps: 10,
+        lastWeightGrams: null,
+      },
+      {
+        exerciseSlotId: 's2',
+        trainingBlockId: 'b3',
+        setNumber: 1,
+        targetReps: 8,
+        lastWeightGrams: null,
+      },
+    ]);
+  });
+
+  it('carries the given last weights into the new block', () => {
+    expect(
+      draftsForNewBlock(
+        [{ slotId: 's1', targetReps: [10, 10], lastWeightsGrams: [60000, null] }],
+        'b2',
+      ),
+    ).toEqual([
+      {
+        exerciseSlotId: 's1',
+        trainingBlockId: 'b2',
+        setNumber: 1,
+        targetReps: 10,
+        lastWeightGrams: 60000,
+      },
+      {
+        exerciseSlotId: 's1',
+        trainingBlockId: 'b2',
+        setNumber: 2,
+        targetReps: 10,
+        lastWeightGrams: null,
+      },
     ]);
   });
 
@@ -108,6 +151,49 @@ describe('planPrescriptionChange', () => {
       ok: false,
       error: 'invalid-target',
     });
+  });
+});
+
+describe('carriedWeightsBySet', () => {
+  const blockIds = ['b1', 'b2', 'b3'];
+  const set = (trainingBlockId: string, setNumber: number, lastWeightGrams: number | null) => ({
+    trainingBlockId,
+    setNumber,
+    lastWeightGrams,
+  });
+
+  it('takes each set weight from the block before the current one', () => {
+    const weights = carriedWeightsBySet(blockIds, 'b3', [
+      set('b1', 1, 50000),
+      set('b2', 1, 60000),
+      set('b2', 2, 62500),
+      set('b3', 1, 40000),
+    ]);
+    expect(weights.get(1)).toBe(60000);
+    expect(weights.get(2)).toBe(62500);
+  });
+
+  it('falls back to the block before that when the previous block has no weight', () => {
+    const weights = carriedWeightsBySet(blockIds, 'b3', [set('b1', 1, 50000), set('b2', 1, null)]);
+    expect(weights.get(1)).toBe(50000);
+  });
+
+  it('wraps round to the last block of the previous pass', () => {
+    const weights = carriedWeightsBySet(blockIds, 'b1', [
+      set('b1', 1, 40000),
+      set('b2', 1, 60000),
+      set('b3', 1, 70000),
+    ]);
+    expect(weights.get(1)).toBe(70000);
+  });
+
+  it('uses the current block last, when no other block has a weight', () => {
+    const weights = carriedWeightsBySet(blockIds, 'b2', [set('b2', 1, 40000)]);
+    expect(weights.get(1)).toBe(40000);
+  });
+
+  it('has no weight for a set never weighed', () => {
+    expect(carriedWeightsBySet(blockIds, 'b2', [set('b1', 1, null)]).has(1)).toBe(false);
   });
 });
 

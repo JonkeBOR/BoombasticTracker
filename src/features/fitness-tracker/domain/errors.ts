@@ -14,6 +14,8 @@ export const fitnessErrorCodes = [
   'invalid-position',
   'invalid-block',
   'prescription-needs-a-set',
+  'slot-periodized',
+  'slot-not-periodized',
   'already-weighed-in-today',
   'exercise-in-use',
   'exercise-archived',

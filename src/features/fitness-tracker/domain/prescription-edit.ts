@@ -51,8 +51,9 @@ function summarizeBlock(targets: readonly number[]): string {
 
 export function summarize(
   prescriptions: readonly { plannedSets: readonly { targetReps: number }[] }[],
+  isPeriodized: boolean,
 ): string {
-  return prescriptions
+  return (isPeriodized ? prescriptions : prescriptions.slice(0, 1))
     .map((prescription) => summarizeBlock(prescription.plannedSets.map((set) => set.targetReps)))
     .join(' · ');
 }

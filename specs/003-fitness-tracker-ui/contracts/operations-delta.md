@@ -65,3 +65,22 @@ Spec 002's tests for rules 4–9 and 13 assert behaviour that FR-045 deliberatel
 the new transitions table, not deleted. Each test title keeps its rule reference and adds the FR it now
 follows. Every other spec 002 test keeps its assertions (FR-044). Only the renamed fields (`pass`,
 `block`) and shared fixture helpers change where the types require it.
+
+## Periodization (added after spec 003)
+
+Each exercise slot is periodized or not (`exercise_slots.is_periodized`, `SlotView.isPeriodized`). Slots that existed
+before stay periodized. A non-periodized slot still has planned sets in every block, all with the same scheme. Its
+`last_weight_grams` is kept the same across blocks for each set number, so a set's prefill is its weight from the last
+block performed. `set_logs` is never read for the prefill.
+
+| Operation                                                       | Change                                                                                                                                                                                                                                   | Refusals                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `addExerciseSlot`                                               | Takes `isPeriodized?: boolean`, `true` when omitted. The route defaults it to `false`                                                                                                                                                    | unchanged                                                  |
+| `setPrescription`                                               | Refused for a non-periodized slot                                                                                                                                                                                                        | adds `slot-not-periodized`                                 |
+| `setUniformPrescription(db, profileId, slotId, { targetReps })` | **New**. Sets the same targets in every block of a non-periodized slot, keeping the weights of the sets that remain                                                                                                                      | `not-found`, `slot-periodized`, `prescription-needs-a-set` |
+| `setSlotPeriodization(db, profileId, slotId, input)`            | **New**. `{ isPeriodized: true }` clears the slot's weights. `{ isPeriodized: false, targetReps }` sets one scheme for every block, and gives each set the weight carried from the most recent block before the current one that has one | `not-found`, `prescription-needs-a-set`                    |
+| `logSet`                                                        | For a non-periodized slot, updates the last weight of that set number in every block                                                                                                                                                     | unchanged                                                  |
+| `addTrainingBlock`                                              | A non-periodized slot's new planned sets copy the last block's weights                                                                                                                                                                   | unchanged                                                  |
+
+The slot routes take `isPeriodized` on `POST /api/fitness/workouts/[id]/slots`, and on `PATCH /api/fitness/slots/[id]`
+either `{ isPeriodized: true }`, `{ isPeriodized: false, sets, reps }` or `{ sets, reps }`.

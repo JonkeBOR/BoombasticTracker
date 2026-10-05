@@ -52,7 +52,8 @@ through JSON route handlers under `src/app/api/fitness/`, each a plain function 
 `src/features/fitness-tracker/server/handlers/` wrapped by `fitnessRoute`. Shared client pieces are in
 `src/features/fitness-tracker/components/`, and all text is in `src/lib/strings/fitness.ts`. A
 program has one cycle that only records where the user is (the current block and a pass counter), and
-history lives in the set logs. The contract of the operations is
+history lives in the set logs. An exercise slot is periodized, with its own scheme and last weights in each
+block, or not, with one scheme whose last weights carry from block to block. The contract of the operations is
 `specs/002-fitness-domain-model/contracts/fitness-operations.md`, as changed by
 `specs/003-fitness-tracker-ui/contracts/operations-delta.md`. See
 [006-domain-persistence.md](docs/architecture/006-domain-persistence.md) and

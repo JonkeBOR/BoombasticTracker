@@ -333,6 +333,7 @@ export async function logSet(
       slotId: exerciseSlots.id,
       slotWorkoutId: exerciseSlots.workoutId,
       exerciseId: exerciseSlots.exerciseId,
+      isPeriodized: exerciseSlots.isPeriodized,
       blockId: trainingBlocks.id,
       blockNumber: trainingBlocks.position,
     })
@@ -380,7 +381,14 @@ export async function logSet(
     db
       .update(plannedSets)
       .set({ lastWeightGrams: decision.value.newLastWeightGrams })
-      .where(eq(plannedSets.id, plannedSetId)),
+      .where(
+        target.isPeriodized
+          ? eq(plannedSets.id, plannedSetId)
+          : and(
+              eq(plannedSets.exerciseSlotId, target.slotId),
+              eq(plannedSets.setNumber, target.setNumber),
+            ),
+      ),
   ]);
   return succeed(toSetLog(row));
 }

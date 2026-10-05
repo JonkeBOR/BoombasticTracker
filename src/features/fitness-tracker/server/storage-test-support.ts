@@ -15,7 +15,10 @@ export function expectOk<T, E extends string>(result: Result<T, E>): T {
 export type ProgramSpec = {
   name?: string;
   blockCount: number;
-  workouts: { name: string; slots: { exercise: string; targetReps: number[] }[] }[];
+  workouts: {
+    name: string;
+    slots: { exercise: string; targetReps: number[]; isPeriodized?: boolean }[];
+  }[];
 };
 
 async function exerciseIdByName(
@@ -56,6 +59,7 @@ export async function createProgramFromSpec(
         await addExerciseSlot(db, profileId, workout?.id ?? '', {
           exerciseId,
           targetReps: slotSpec.targetReps,
+          isPeriodized: slotSpec.isPeriodized ?? true,
         }),
       );
     }

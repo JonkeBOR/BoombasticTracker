@@ -54,6 +54,7 @@ export function programFixture(overrides: Partial<Program> = {}): Program {
             id: 's1',
             exercise,
             isOptional: false,
+            isPeriodized: true,
             prescriptions: [
               prescription('b1', [12, 12, 12]),
               prescription('b2', [10, 10, 10]),
@@ -64,6 +65,7 @@ export function programFixture(overrides: Partial<Program> = {}): Program {
             id: 's2',
             exercise: { id: 'e2', name: 'Curl', isArchived: false },
             isOptional: true,
+            isPeriodized: false,
             prescriptions: [
               prescription('b1', [12]),
               prescription('b2', [12]),

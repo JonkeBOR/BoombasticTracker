@@ -87,24 +87,42 @@ describe('removesWeightedSets', () => {
 describe('summarize', () => {
   it('FR-027: writes sets × reps per block', () => {
     expect(
-      summarize([
-        { plannedSets: [{ targetReps: 12 }, { targetReps: 12 }, { targetReps: 12 }] },
-        { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }, { targetReps: 10 }] },
-        { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }] },
-      ]),
+      summarize(
+        [
+          { plannedSets: [{ targetReps: 12 }, { targetReps: 12 }, { targetReps: 12 }] },
+          { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }, { targetReps: 10 }] },
+          { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }] },
+        ],
+        true,
+      ),
     ).toBe('3×12 · 3×10 · 2×10');
   });
 
   it('writes the reps of a block with mixed targets', () => {
     expect(
-      summarize([
-        { plannedSets: [{ targetReps: 12 }, { targetReps: 10 }, { targetReps: 8 }] },
-        { plannedSets: [{ targetReps: 5 }] },
-      ]),
+      summarize(
+        [
+          { plannedSets: [{ targetReps: 12 }, { targetReps: 10 }, { targetReps: 8 }] },
+          { plannedSets: [{ targetReps: 5 }] },
+        ],
+        true,
+      ),
     ).toBe('12/10/8 · 1×5');
   });
 
+  it('writes a non-periodized scheme once', () => {
+    expect(
+      summarize(
+        [
+          { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }, { targetReps: 10 }] },
+          { plannedSets: [{ targetReps: 10 }, { targetReps: 10 }, { targetReps: 10 }] },
+        ],
+        false,
+      ),
+    ).toBe('3×10');
+  });
+
   it('shows a dash for a block with no sets', () => {
-    expect(summarize([{ plannedSets: [] }])).toBe('—');
+    expect(summarize([{ plannedSets: [] }], true)).toBe('—');
   });
 });

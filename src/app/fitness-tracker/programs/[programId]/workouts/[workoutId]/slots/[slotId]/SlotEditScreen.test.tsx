@@ -148,6 +148,138 @@ describe('SlotEditScreen', () => {
     });
   });
 
+  describe('periodization', () => {
+    function periodizedToggle(): HTMLInputElement {
+      const toggle = screen.getByRole('checkbox', {
+        name: fitnessStrings.slotEdit.periodizedToggle,
+      });
+      if (!(toggle instanceof HTMLInputElement)) {
+        throw new Error('The periodized toggle is not an input');
+      }
+      return toggle;
+    }
+
+    function everyBlock() {
+      return screen.getByRole('region', { name: fitnessStrings.slotEdit.everyBlockTitle });
+    }
+
+    it('shows a periodized slot as checked, with a section per block', () => {
+      renderScreen();
+
+      expect(periodizedToggle().checked).toBe(true);
+      expect(section(1)).toBeDefined();
+      expect(
+        screen.queryByRole('region', { name: fitnessStrings.slotEdit.everyBlockTitle }),
+      ).toBeNull();
+    });
+
+    it('shows a non-periodized slot with one scheme for every block', () => {
+      renderScreen(fixtureSlot(1));
+
+      expect(periodizedToggle().checked).toBe(false);
+      expect(
+        screen.queryByRole('region', { name: fitnessStrings.slotEdit.blockTitle(1, null) }),
+      ).toBeNull();
+      const scheme = everyBlock();
+      const sets = within(scheme).getByLabelText(fitnessStrings.slotEdit.schemeSetsLabel);
+      const reps = within(scheme).getByLabelText(fitnessStrings.slotEdit.schemeRepsLabel);
+      expect(sets instanceof HTMLInputElement && sets.value).toBe('1');
+      expect(reps instanceof HTMLInputElement && reps.value).toBe('12');
+      expect(within(scheme).getByText(fitnessStrings.slotEdit.setNumber(1))).toBeDefined();
+    });
+
+    it('saves a new sets × reps for every block', async () => {
+      renderScreen(fixtureSlot(1));
+      const scheme = everyBlock();
+
+      fireEvent.change(within(scheme).getByLabelText(fitnessStrings.slotEdit.schemeSetsLabel), {
+        target: { value: '3' },
+      });
+      fireEvent.click(
+        within(scheme).getByRole('button', { name: fitnessStrings.slotEdit.schemeSave }),
+      );
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(lastCall()).toEqual({
+        url: '/api/fitness/slots/s2',
+        method: 'PATCH',
+        body: JSON.stringify({ sets: 3, reps: 12 }),
+      });
+    });
+
+    it('confirms before a new scheme removes a set that has a last weight', () => {
+      renderScreen(withLastWeightOnLastSet({ ...fixtureSlot(0), isPeriodized: false }));
+      const scheme = everyBlock();
+
+      fireEvent.change(within(scheme).getByLabelText(fitnessStrings.slotEdit.schemeSetsLabel), {
+        target: { value: '2' },
+      });
+      fireEvent.click(
+        within(scheme).getByRole('button', { name: fitnessStrings.slotEdit.schemeSave }),
+      );
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        within(scheme).getByRole('button', {
+          name: fitnessStrings.slotEdit.removeSetsConfirmLabel,
+        }),
+      ).toBeDefined();
+    });
+
+    it('turning it off asks for one sets × reps, prefilled from the first block', async () => {
+      renderScreen();
+
+      fireEvent.click(periodizedToggle());
+      const sets = screen.getByLabelText(fitnessStrings.slotEdit.schemeSetsLabel);
+      const reps = screen.getByLabelText(fitnessStrings.slotEdit.schemeRepsLabel);
+      expect(sets instanceof HTMLInputElement && sets.value).toBe('3');
+      expect(reps instanceof HTMLInputElement && reps.value).toBe('12');
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole('button', { name: fitnessStrings.slotEdit.unperiodizeApply }),
+      );
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(lastCall()).toEqual({
+        url: '/api/fitness/slots/s1',
+        method: 'PATCH',
+        body: JSON.stringify({ isPeriodized: false, sets: 3, reps: 12 }),
+      });
+    });
+
+    it('turning it on with no last weights needs no confirmation', async () => {
+      const slot = fixtureSlot(1);
+      renderScreen({
+        ...slot,
+        prescriptions: slot.prescriptions.map((prescription) => ({
+          ...prescription,
+          plannedSets: prescription.plannedSets.map((set) => ({ ...set, lastWeightKg: null })),
+        })),
+      });
+
+      fireEvent.click(periodizedToggle());
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(lastCall()).toEqual({
+        url: '/api/fitness/slots/s2',
+        method: 'PATCH',
+        body: JSON.stringify({ isPeriodized: true }),
+      });
+    });
+
+    it('turning it on confirms first that last weights are cleared', async () => {
+      renderScreen(withLastWeightOnLastSet(fixtureSlot(1)));
+
+      fireEvent.click(periodizedToggle());
+      expect(screen.getByText(fitnessStrings.slotEdit.periodizeConfirm)).toBeDefined();
+      expect(fetchMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: fitnessStrings.slotEdit.periodizeApply }));
+
+      await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+      expect(lastCall().body).toBe(JSON.stringify({ isPeriodized: true }));
+    });
+  });
+
   describe('the prescription of each block', () => {
     it('FR-029: has one section per block with its number and label', () => {
       renderScreen();
@@ -223,7 +355,7 @@ describe('SlotEditScreen', () => {
     });
 
     it('FR-015: offers no removal when only one set is left', () => {
-      renderScreen(fixtureSlot(1));
+      renderScreen({ ...fixtureSlot(1), isPeriodized: true });
 
       expect(
         within(section(1)).queryByRole('button', { name: fitnessStrings.slotEdit.removeLastSet }),

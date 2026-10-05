@@ -36,6 +36,13 @@
       "when": 1791028398716,
       "tag": "0004_cycle_container_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791226317070,
+      "tag": "0005_slot_periodization",
+      "breakpoints": true
     }
   ]
 }

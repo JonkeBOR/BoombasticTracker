@@ -110,6 +110,7 @@ export const fitnessStrings = {
     newExerciseNameLabel: 'New exercise name',
     setsLabel: 'Sets',
     repsLabel: 'Reps',
+    periodizedLabel: 'Periodized',
     save: 'Save',
     removeSlotFor: (name: string) => `Remove ${name}`,
     removeSlotConfirmLabel: 'Remove exercise',
@@ -123,6 +124,15 @@ export const fitnessStrings = {
     replaceConfirm: 'Last weights for this exercise in this workout will be cleared.',
     replacementLabel: 'Replacement exercise',
     optionalToggle: 'Optional exercise',
+    periodizedToggle: 'Periodized',
+    periodizeConfirm:
+      'Last weights for this exercise will be cleared, and each block gets its own sets and reps.',
+    periodizeApply: 'Periodize',
+    unperiodizeApply: 'Use for every block',
+    everyBlockTitle: 'Every block',
+    schemeSetsLabel: 'Number of sets',
+    schemeRepsLabel: 'Reps per set',
+    schemeSave: 'Save',
     blockTitle: (blockNumber: number, label: string | null) =>
       label === null ? `Block ${blockNumber}` : `Block ${blockNumber} · ${label}`,
     setNumber: (setNumber: number) => `Set ${setNumber}`,
@@ -249,6 +259,8 @@ export const fitnessErrorStrings: Record<FitnessErrorCode, string> = {
   'invalid-position': 'That position does not exist.',
   'invalid-block': 'That block cannot be chosen.',
   'prescription-needs-a-set': 'Every exercise needs at least one set.',
+  'slot-periodized': 'This exercise has its own scheme in each block.',
+  'slot-not-periodized': 'This exercise uses one scheme for every block.',
   'already-weighed-in-today': "You've already weighed in today.",
   'exercise-in-use':
     'This exercise is used in a workout or has logged sets, so it cannot be deleted. Archive it instead.',

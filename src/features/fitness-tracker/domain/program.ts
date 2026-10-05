@@ -6,6 +6,7 @@ export type PlannedSetDraft = {
   trainingBlockId: string;
   setNumber: number;
   targetReps: number;
+  lastWeightGrams?: number | null;
 };
 
 export type PrescriptionChange = {
@@ -49,10 +50,50 @@ function draftsFor(
 }
 
 export function draftsForNewBlock(
-  slotTargets: readonly { slotId: string; targetReps: readonly number[] }[],
+  slotTargets: readonly {
+    slotId: string;
+    targetReps: readonly number[];
+    lastWeightsGrams?: readonly (number | null)[];
+  }[],
   newBlockId: string,
 ): PlannedSetDraft[] {
-  return slotTargets.flatMap((slot) => draftsFor(slot.slotId, newBlockId, slot.targetReps));
+  return slotTargets.flatMap((slot) =>
+    draftsFor(slot.slotId, newBlockId, slot.targetReps).map((draft, index) => ({
+      ...draft,
+      lastWeightGrams: slot.lastWeightsGrams?.[index] ?? null,
+    })),
+  );
+}
+
+function blocksMostRecentFirst(blockIds: readonly string[], currentBlockId: string): string[] {
+  const currentIndex = blockIds.indexOf(currentBlockId);
+  const before = currentIndex === -1 ? [...blockIds] : blockIds.slice(0, currentIndex);
+  const fromCurrent = currentIndex === -1 ? [] : blockIds.slice(currentIndex);
+  return [...before.reverse(), ...fromCurrent.reverse()];
+}
+
+export function carriedWeightsBySet(
+  blockIds: readonly string[],
+  currentBlockId: string,
+  plannedSets: readonly {
+    trainingBlockId: string;
+    setNumber: number;
+    lastWeightGrams: number | null;
+  }[],
+): ReadonlyMap<number, number> {
+  const weights = new Map<number, number>();
+  for (const blockId of blocksMostRecentFirst(blockIds, currentBlockId)) {
+    for (const plannedSet of plannedSets) {
+      if (
+        plannedSet.trainingBlockId === blockId &&
+        plannedSet.lastWeightGrams !== null &&
+        !weights.has(plannedSet.setNumber)
+      ) {
+        weights.set(plannedSet.setNumber, plannedSet.lastWeightGrams);
+      }
+    }
+  }
+  return weights;
 }
 
 export function draftsForNewSlot(

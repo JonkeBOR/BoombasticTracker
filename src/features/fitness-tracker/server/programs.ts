@@ -4,6 +4,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import type { Database } from '@/lib/server/database';
 import { canUseInSlot } from '../domain/exercise';
 import {
+  carriedWeightsBySet,
   draftsForNewBlock,
   draftsForNewSlot,
   type PlannedSetDraft,
@@ -33,6 +34,12 @@ import {
 type NameError = 'name-required' | 'name-too-long';
 type MoveError = 'not-found' | 'invalid-position';
 type TargetsError = 'prescription-needs-a-set' | 'invalid-target';
+type ExistingPlannedSet = {
+  id: string;
+  trainingBlockId: string;
+  setNumber: number;
+  lastWeightGrams: number | null;
+};
 
 const plannedSetColumns = 6;
 const trainingBlockColumns = 4;
@@ -127,7 +134,7 @@ function insertPlannedSets(db: Database, drafts: readonly PlannedSetDraft[]): St
     trainingBlockId: draft.trainingBlockId,
     setNumber: draft.setNumber,
     targetReps: draft.targetReps,
-    lastWeightGrams: null,
+    lastWeightGrams: draft.lastWeightGrams ?? null,
   }));
   return chunkRows(rows, plannedSetColumns).map((part) => db.insert(plannedSets).values(part));
 }
@@ -294,13 +301,18 @@ export async function addTrainingBlock(
   }
   const newBlockId = crypto.randomUUID();
   const slotTargets = rows.workouts.flatMap((workout) =>
-    workout.slots.map((slot) => ({
-      slotId: slot.id,
-      targetReps: slot.plannedSets
+    workout.slots.map((slot) => {
+      const lastBlockSets = slot.plannedSets
         .filter((plannedSet) => plannedSet.trainingBlockId === lastBlock.id)
-        .sort((left, right) => left.setNumber - right.setNumber)
-        .map((plannedSet) => plannedSet.targetReps),
-    })),
+        .sort((left, right) => left.setNumber - right.setNumber);
+      return {
+        slotId: slot.id,
+        targetReps: lastBlockSets.map((plannedSet) => plannedSet.targetReps),
+        lastWeightsGrams: slot.isPeriodized
+          ? []
+          : lastBlockSets.map((plannedSet) => plannedSet.lastWeightGrams),
+      };
+    }),
   );
   await runBatch(db, [
     db.insert(trainingBlocks).values({
@@ -435,7 +447,7 @@ export async function addExerciseSlot(
   db: Database,
   profileId: string,
   workoutId: string,
-  input: { exerciseId: string; targetReps: number[] },
+  input: { exerciseId: string; targetReps: number[]; isPeriodized?: boolean },
 ): Promise<
   Result<Program, 'not-found' | 'exercise-archived' | 'exercise-already-in-workout' | TargetsError>
 > {
@@ -485,6 +497,7 @@ export async function addExerciseSlot(
       position: existingSlots.length + 1,
       exerciseId: input.exerciseId,
       isOptional: false,
+      isPeriodized: input.isPeriodized ?? true,
     }),
     ...insertPlannedSets(db, drafts.value),
   ]);
@@ -563,29 +576,54 @@ export async function removeExerciseSlot(
   return getProgram(db, profileId, programId);
 }
 
-export async function setPrescription(
+async function slotSettings(
   db: Database,
   profileId: string,
   slotId: string,
-  blockId: string,
-  input: { targetReps: number[] },
-): Promise<Result<Program, 'not-found' | TargetsError>> {
-  const [slotProgramId, blockProgramId] = await Promise.all([
-    programIdOfSlot(db, profileId, slotId),
-    programIdOfBlock(db, profileId, blockId),
-  ]);
-  if (slotProgramId === null || slotProgramId !== blockProgramId) {
-    return fail('not-found');
-  }
-  const existing = await db
-    .select({ id: plannedSets.id, setNumber: plannedSets.setNumber })
+): Promise<{ programId: string; isPeriodized: boolean } | null> {
+  const [row] = await db
+    .select({ programId: workouts.programId, isPeriodized: exerciseSlots.isPeriodized })
+    .from(exerciseSlots)
+    .innerJoin(workouts, eq(workouts.id, exerciseSlots.workoutId))
+    .innerJoin(programs, eq(programs.id, workouts.programId))
+    .where(and(eq(exerciseSlots.id, slotId), eq(programs.profileId, profileId)))
+    .limit(1);
+  return row ?? null;
+}
+
+async function existingPlannedSets(db: Database, slotId: string): Promise<ExistingPlannedSet[]> {
+  return db
+    .select({
+      id: plannedSets.id,
+      trainingBlockId: plannedSets.trainingBlockId,
+      setNumber: plannedSets.setNumber,
+      lastWeightGrams: plannedSets.lastWeightGrams,
+    })
     .from(plannedSets)
-    .where(and(eq(plannedSets.exerciseSlotId, slotId), eq(plannedSets.trainingBlockId, blockId)));
-  const change = planPrescriptionChange(existing, input.targetReps);
+    .where(eq(plannedSets.exerciseSlotId, slotId));
+}
+
+async function orderedBlockIds(db: Database, programId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: trainingBlocks.id })
+    .from(trainingBlocks)
+    .where(eq(trainingBlocks.programId, programId))
+    .orderBy(asc(trainingBlocks.position));
+  return rows.map((row) => row.id);
+}
+
+function prescriptionStatements(
+  db: Database,
+  slotId: string,
+  blockId: string,
+  existing: readonly { id: string; setNumber: number }[],
+  targetReps: readonly number[],
+): Result<Statement[], TargetsError> {
+  const change = planPrescriptionChange(existing, targetReps);
   if (!change.ok) {
     return fail(change.error);
   }
-  await runBatch(db, [
+  return succeed([
     ...change.value.update.map((item) =>
       db
         .update(plannedSets)
@@ -605,7 +643,145 @@ export async function setPrescription(
       db.delete(plannedSets).where(inArray(plannedSets.id, ids)),
     ),
   ]);
-  return getProgram(db, profileId, slotProgramId);
+}
+
+function uniformPrescriptionStatements(
+  db: Database,
+  slotId: string,
+  blockIds: readonly string[],
+  existing: readonly ExistingPlannedSet[],
+  targetReps: readonly number[],
+): Result<Statement[], TargetsError> {
+  const statements: Statement[] = [];
+  for (const blockId of blockIds) {
+    const blockStatements = prescriptionStatements(
+      db,
+      slotId,
+      blockId,
+      existing.filter((plannedSet) => plannedSet.trainingBlockId === blockId),
+      targetReps,
+    );
+    if (!blockStatements.ok) {
+      return fail(blockStatements.error);
+    }
+    statements.push(...blockStatements.value);
+  }
+  return succeed(statements);
+}
+
+export async function setPrescription(
+  db: Database,
+  profileId: string,
+  slotId: string,
+  blockId: string,
+  input: { targetReps: number[] },
+): Promise<Result<Program, 'not-found' | 'slot-not-periodized' | TargetsError>> {
+  const [slot, blockProgramId] = await Promise.all([
+    slotSettings(db, profileId, slotId),
+    programIdOfBlock(db, profileId, blockId),
+  ]);
+  if (slot === null || slot.programId !== blockProgramId) {
+    return fail('not-found');
+  }
+  if (!slot.isPeriodized) {
+    return fail('slot-not-periodized');
+  }
+  const existing = await db
+    .select({ id: plannedSets.id, setNumber: plannedSets.setNumber })
+    .from(plannedSets)
+    .where(and(eq(plannedSets.exerciseSlotId, slotId), eq(plannedSets.trainingBlockId, blockId)));
+  const statements = prescriptionStatements(db, slotId, blockId, existing, input.targetReps);
+  if (!statements.ok) {
+    return fail(statements.error);
+  }
+  await runBatch(db, statements.value);
+  return getProgram(db, profileId, slot.programId);
+}
+
+export async function setUniformPrescription(
+  db: Database,
+  profileId: string,
+  slotId: string,
+  input: { targetReps: number[] },
+): Promise<Result<Program, 'not-found' | 'slot-periodized' | TargetsError>> {
+  const slot = await slotSettings(db, profileId, slotId);
+  if (slot === null) {
+    return fail('not-found');
+  }
+  if (slot.isPeriodized) {
+    return fail('slot-periodized');
+  }
+  const [blockIds, existing] = await Promise.all([
+    orderedBlockIds(db, slot.programId),
+    existingPlannedSets(db, slotId),
+  ]);
+  const statements = uniformPrescriptionStatements(
+    db,
+    slotId,
+    blockIds,
+    existing,
+    input.targetReps,
+  );
+  if (!statements.ok) {
+    return fail(statements.error);
+  }
+  await runBatch(db, statements.value);
+  return getProgram(db, profileId, slot.programId);
+}
+
+export async function setSlotPeriodization(
+  db: Database,
+  profileId: string,
+  slotId: string,
+  input: { isPeriodized: true } | { isPeriodized: false; targetReps: number[] },
+): Promise<Result<Program, 'not-found' | TargetsError>> {
+  const slot = await slotSettings(db, profileId, slotId);
+  if (slot === null) {
+    return fail('not-found');
+  }
+  if (input.isPeriodized) {
+    if (!slot.isPeriodized) {
+      await runBatch(db, [
+        db.update(exerciseSlots).set({ isPeriodized: true }).where(eq(exerciseSlots.id, slotId)),
+        db
+          .update(plannedSets)
+          .set({ lastWeightGrams: null })
+          .where(eq(plannedSets.exerciseSlotId, slotId)),
+      ]);
+    }
+    return getProgram(db, profileId, slot.programId);
+  }
+  const [blockIds, existing, [cycle]] = await Promise.all([
+    orderedBlockIds(db, slot.programId),
+    existingPlannedSets(db, slotId),
+    db
+      .select({ currentBlockId: cycles.currentBlockId })
+      .from(cycles)
+      .where(eq(cycles.programId, slot.programId))
+      .limit(1),
+  ]);
+  const statements = uniformPrescriptionStatements(
+    db,
+    slotId,
+    blockIds,
+    existing,
+    input.targetReps,
+  );
+  if (!statements.ok) {
+    return fail(statements.error);
+  }
+  const carried = carriedWeightsBySet(blockIds, cycle?.currentBlockId ?? '', existing);
+  await runBatch(db, [
+    db.update(exerciseSlots).set({ isPeriodized: false }).where(eq(exerciseSlots.id, slotId)),
+    ...statements.value,
+    ...input.targetReps.map((_, index) =>
+      db
+        .update(plannedSets)
+        .set({ lastWeightGrams: carried.get(index + 1) ?? null })
+        .where(and(eq(plannedSets.exerciseSlotId, slotId), eq(plannedSets.setNumber, index + 1))),
+    ),
+  ]);
+  return getProgram(db, profileId, slot.programId);
 }
 
 export async function replaceSlotExercise(
