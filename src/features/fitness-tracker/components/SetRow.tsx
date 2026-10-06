@@ -20,6 +20,8 @@ type SetRowProps = {
   onLogged: () => void;
 };
 
+type LoggedValues = Pick<SetLog, 'reps' | 'weightKg'>;
+
 const wholeNumber = /^\d+$/;
 const maxReps = 999;
 const columnCount = 4;
@@ -43,17 +45,18 @@ export function SetRow({
   onLogged,
 }: SetRowProps) {
   const [inputError, setInputError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [optimistic, setOptimistic] = useState<LoggedValues | null>(null);
   const action = useFitnessAction();
+  const shown = logged ?? optimistic;
 
-  if (logged) {
+  if (shown) {
     return (
-      <tr className={confirming ? `${styles.logged} ${styles.sweep}` : styles.logged}>
+      <tr className={optimistic ? `${styles.logged} ${styles.sweep}` : styles.logged}>
         <td className={styles.number}>{plannedSet.setNumber}</td>
         <td className={styles.value}>
-          {logged.weightKg === null ? fitnessStrings.common.noValue : formatKg(logged.weightKg)}
+          {shown.weightKg === null ? fitnessStrings.common.noValue : formatKg(shown.weightKg)}
         </td>
-        <td className={styles.value}>{logged.reps}</td>
+        <td className={styles.value}>{shown.reps}</td>
         <td className={styles.action}>
           <span className={styles.check} aria-hidden="true">
             <Check className={styles.checkIcon} />
@@ -84,7 +87,7 @@ export function SetRow({
       return;
     }
     setInputError(null);
-    setConfirming(true);
+    setOptimistic({ reps, weightKg: weightKg.value });
     const succeeded = await action.run('POST', `/api/fitness/sessions/${sessionId}/sets`, {
       plannedSetId: plannedSet.id,
       reps,
@@ -93,7 +96,7 @@ export function SetRow({
     if (succeeded) {
       onLogged();
     } else {
-      setConfirming(false);
+      setOptimistic(null);
     }
   }
 
@@ -127,7 +130,7 @@ export function SetRow({
         <td className={styles.action}>
           <button
             type="button"
-            className={confirming ? `${styles.log} ${styles.confirming}` : styles.log}
+            className={styles.log}
             aria-label={fitnessStrings.session.logLabel(plannedSet.setNumber, exerciseName)}
             disabled={action.pending}
             onClick={() => void log()}
