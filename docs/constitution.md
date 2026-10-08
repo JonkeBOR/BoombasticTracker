@@ -3,6 +3,7 @@
 ## Core Principles
 
 ### I. Simplicity First (NON-NEGOTIABLE)
+
 OneStopShop is a personal, low-traffic application and a learning project, not an
 enterprise system. Every architecture, tooling, or infrastructure decision MUST prefer
 **simple + understandable + secure enough + easy to deploy** over enterprise-style patterns.
@@ -13,6 +14,7 @@ concrete technical need justifies it. Decisions not yet required (e.g. schema de
 without the overhead of production-grade infrastructure a personal single-user app does not need.
 
 ### II. Server-Mediated Data Access
+
 The React client (browser/PWA) MUST NOT communicate directly with the database or any other
 persistence backend. All data access goes through the Next.js server acting as a
 Backend-for-Frontend (BFF), exposed to the client as application-specific endpoints rather than
@@ -23,6 +25,7 @@ storage provider's API.
 persistence layer (D1/SQLite today) to change later without breaking the client contract.
 
 ### III. Session/Identity Separation
+
 Google OAuth (identity and authorization) and the application's own session (a secure, persistent
 HTTP cookie managed by the Next.js server) are distinct concerns and MUST be implemented as such.
 Google OAuth is used for identity only and MUST request no scope beyond `openid`, `email` and
@@ -38,6 +41,7 @@ expires.
 seamless "open app → already authenticated" experience appropriate for a Home Screen PWA.
 
 ### IV. Free-Tier Hosting Constraint
+
 Hosting and infrastructure choices MUST fit within a genuinely free service tier unless a concrete
 technical reason requires otherwise. The app does not need high availability, autoscaling,
 enterprise infrastructure, paid databases, or dedicated servers, and MUST NOT take on such
@@ -49,6 +53,7 @@ single Worker serving both pages and server — no separate frontend and backend
 must stay proportionate to that reality.
 
 ### V. Self-Documenting Code
+
 Code MUST be self-documenting through clear naming and structure. Do not add comments explaining
 what code does. Do not use inline CSS (`style="..."` attributes or inline style objects) — styling
 belongs in stylesheets/CSS modules. Do not hardcode bare user-facing strings directly in
@@ -82,8 +87,8 @@ OAuth library/session-management implementation, database schema beyond what a f
 API endpoint design, data/repository abstraction, UI/component architecture, charting library, offline
 support, error handling strategy, and pull-request checks. Each MUST be decided incrementally,
 at the point of implementation, rather than speculatively up front — and each cross-cutting
-decision should be captured in `docs/architecture/` once made, while feature-scoped decisions
-belong in that feature's Spec Kit documents under `specs/`.
+decision should be captured in `docs/architecture/` once made. Feature-scoped decisions live in
+the code and its tests; they reach `docs/architecture/` only when they outlive the feature.
 
 ## Development Workflow
 
@@ -92,8 +97,8 @@ feature MUST begin with one Playwright acceptance test in `e2e/`, written from t
 of view and confirmed failing for the intended reason before implementation starts; the feature is
 done when that test passes unmodified. A **domain-only feature** adds domain rules or stored data
 but no screen or route the phone can reach. It is exempt from the Playwright test, because no
-phone-level behaviour exists to check. Its spec acceptance scenarios MUST then serve as its acceptance
-tests instead: they are written first as Vitest tests, confirmed failing, and the feature is done
+phone-level behaviour exists to check. Acceptance scenarios describing the behaviour it promises
+MUST then serve as its acceptance tests instead: they are written first as Vitest tests, confirmed failing, and the feature is done
 when they pass unmodified. The first later feature that exposes the domain to the phone MUST bring
 its own Playwright acceptance test. Within a feature, domain logic, route handlers, data
 mapping, validation and synchronous component behaviour MUST be driven by a Vitest
@@ -105,16 +110,14 @@ Playwright, it is in the wrong place. Every code change MUST finish with
 ## Governance
 
 This constitution supersedes other informal practices for OneStopShop. Amendments are made
-by editing `.specify/memory/constitution.md` directly, updating the Sync Impact Report at the top
-of the file, and bumping the version per semantic versioning: MAJOR for backward-incompatible
-principle removals/redefinitions, MINOR for new principles or materially expanded guidance, PATCH
-for clarifications and wording fixes. `LAST_AMENDED_DATE` MUST be updated on every substantive
-change.
+by editing `docs/constitution.md` directly and bumping the version per semantic versioning: MAJOR
+for backward-incompatible principle removals/redefinitions, MINOR for new principles or materially
+expanded guidance, PATCH for clarifications and wording fixes. The Last Amended date MUST be
+updated on every substantive change.
 
-Every `/speckit-plan`, `/speckit-tasks`, and `/speckit-implement` run MUST be checked against
-these principles; any deviation MUST be justified in the relevant plan's Complexity Tracking (or
-equivalent) section rather than silently introduced. Use the guideline documents under `docs/`
+Every change MUST be checked against these principles; any deviation MUST be justified in
+`docs/architecture/` rather than silently introduced. Use the guideline documents under `docs/`
 and the architecture decisions under `docs/architecture/` for detailed runtime/architecture
 guidance that supplements, but does not override, this constitution.
 
-**Version**: 2.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-02
+**Version**: 2.2.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-10-08

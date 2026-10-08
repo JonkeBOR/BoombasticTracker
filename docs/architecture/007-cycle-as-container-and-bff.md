@@ -5,7 +5,7 @@
 
 ## Context
 
-`specs/003-fitness-tracker-ui` put the first screens on the fitness domain. Two things in the domain
+The fitness tracker UI (feature 003) put the first screens on the fitness domain. Two things in the domain
 as built by 006 did not survive contact with a phone UI:
 
 - A **cycle** was one row per pass through a program, with a number, a status and start and end
@@ -92,5 +92,5 @@ and changing that is a project-wide decision, not a feature's. It is open for la
   database when this branch merges. Read the generated SQL of `0002` and `0004` before merging.
 - Each program's single cycle is keyed by `program_id`, so a future second cycle per program (for
   example, per profile) would need a new key.
-- The Worker grew from 1,103 KiB to 1,350 KiB gzipped (`wrangler deploy --dry-run`), well inside the free
-  plan's 3 MiB.
+- The Worker grew from 1,103 KiB to 1,350 KiB gzipped (`wrangler deploy --dry-run`). The free plan
+  limits only the uncompressed size, to 64 MiB; see 004 for the limits that matter.

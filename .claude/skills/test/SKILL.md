@@ -82,6 +82,28 @@ temporary trigger drops it in `finally`. `storage-test-support.ts` has `expectOk
 Never run two Vitest invocations at once: the setup wipes `.wrangler/test-state` at the start of
 each run. See `docs/architecture/006-domain-persistence.md`.
 
+### EADDRINUSE on Windows
+
+Two storage runs within about two minutes of each other fail dozens of tests with `Failed query: …`
+caused by `connect EADDRINUSE 127.0.0.1:<port>`. The code is not at fault; the machine has run out of
+ephemeral ports.
+
+`getPlatformProxy` reaches D1 over HTTP to a local workerd, and Miniflare's `dispatchFetch` sets
+undici's `reset` flag on every request, closing the connection afterwards (deliberately, in
+`miniflare/src/http/fetch.ts`, to avoid keep-alive races). Every awaited D1 call - `all()`, `run()`,
+`batch()` - therefore opens one loopback connection and leaves one socket in TIME_WAIT for 120
+seconds. Measured on 2026-10-08: one storage run of 223 tests took 57 seconds and left 11,328
+sockets in TIME_WAIT, about 50 per test, against Windows' default range of 16,384 ports. Past about
+300 storage tests a single run will exhaust it on its own. Linux CI reuses loopback ports and is not
+affected.
+
+- **Right now:** wait until `(Get-NetTCPConnection -State TimeWait).Count` is back under about 2,000
+  and run again.
+- **Once per machine:** widen the range from an elevated shell with
+  `netsh int ipv4 set dynamicport tcp start=10000 num=55535`. It persists across reboots.
+- **For good:** `@cloudflare/vitest-pool-workers` runs tests inside workerd with D1 in process and no
+  sockets, but 0.23 needs Vitest ^4.1 and this repo is on Vitest 5.
+
 For a domain-only feature (constitution 2.1.0) the spec's acceptance scenarios are written first as
 tests like these and are the feature's acceptance tests.
 

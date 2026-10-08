@@ -4,7 +4,6 @@ out/
 build/
 coverage/
 package-lock.json
-.specify/
 .claude/
 test-results/
 playwright-report/

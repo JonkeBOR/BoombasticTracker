@@ -5,11 +5,11 @@
 
 ## Context
 
-`specs/002-fitness-domain-model` is the first feature that stores data. Constitution 2.1.0 says
-Drizzle arrives with the first such feature, and 004 left the layout open: how Drizzle's migrations
-meet Wrangler's, how code reaches D1, how multi-row changes stay atomic, and how storage is tested.
-The reasoning is in that feature's `research.md`; this record keeps what outlives it, including the
-places where building it overturned the plan.
+The fitness domain model (feature 002) is the first feature that stores data. Constitution 2.1.0
+says Drizzle arrives with the first such feature, and 004 left the layout open: how Drizzle's
+migrations meet Wrangler's, how code reaches D1, how multi-row changes stay atomic, and how storage
+is tested. This record keeps what outlives the feature, including the places where building it
+overturned the plan.
 
 ## Decision
 

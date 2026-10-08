@@ -90,9 +90,9 @@ is the concrete need which justifies revisiting this, and not before.
 
 Constitution 2.1.0 adds a path for a feature that adds domain rules or stored data but no screen or
 route the phone can reach. There is no phone-level behaviour for an outer Playwright test to
-describe, so the spec's acceptance scenarios take its place. They are written first as Vitest
+describe, so acceptance scenarios for the behaviour it promises take its place. They are written first as Vitest
 tests, confirmed failing for the intended reason, and the feature is done when they pass unmodified.
-`specs/002-fitness-domain-model` is the first such feature.
+The fitness domain model (feature 002) was the first such feature.
 
 In practice each user story starts by adding stub operations that throw `not implemented`, so the
 tests fail on behaviour and not on a missing import, and then writing that story's acceptance tests.
