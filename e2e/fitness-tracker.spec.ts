@@ -43,12 +43,6 @@ test('builds a program, trains it, and finds the logged weight prefilled in the 
 
   await page.getByRole('link', { name: fitnessStrings.navigation.toProgram }).click();
   await page.getByRole('button', { name: fitnessStrings.programEdit.activate }).click();
-  const confirmActivation = page
-    .getByRole('dialog')
-    .getByRole('button', { name: fitnessStrings.programEdit.activateConfirmLabel });
-  if (await confirmActivation.isVisible()) {
-    await confirmActivation.click();
-  }
   await expect(page.getByText(fitnessStrings.programEdit.active, { exact: true })).toBeVisible();
 
   await page.goto('/fitness-tracker');

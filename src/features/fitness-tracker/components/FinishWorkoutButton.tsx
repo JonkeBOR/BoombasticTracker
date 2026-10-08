@@ -13,9 +13,14 @@ import { useSetDrafts } from './useSetDrafts';
 type FinishWorkoutButtonProps = {
   sessionId: string;
   hasLoggedSets: boolean;
+  waiting: boolean;
 };
 
-export function FinishWorkoutButton({ sessionId, hasLoggedSets }: FinishWorkoutButtonProps) {
+export function FinishWorkoutButton({
+  sessionId,
+  hasLoggedSets,
+  waiting,
+}: FinishWorkoutButtonProps) {
   const router = useRouter();
   const action = useFitnessAction();
   const { clearAll } = useSetDrafts(sessionId);
@@ -45,7 +50,7 @@ export function FinishWorkoutButton({ sessionId, hasLoggedSets }: FinishWorkoutB
           type="button"
           className={styles.button}
           aria-label={fitnessStrings.session.finishWorkout}
-          disabled={action.pending}
+          disabled={action.pending || waiting}
           onClick={finish}
         >
           {icon}
@@ -57,7 +62,7 @@ export function FinishWorkoutButton({ sessionId, hasLoggedSets }: FinishWorkoutB
           triggerContent={icon}
           message={fitnessStrings.session.finishEmptyConfirm}
           confirmLabel={fitnessStrings.session.finishEmptyConfirmLabel}
-          disabled={action.pending}
+          disabled={action.pending || waiting}
           onConfirm={finish}
         />
       )}

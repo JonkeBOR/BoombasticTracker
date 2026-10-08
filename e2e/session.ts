@@ -15,7 +15,7 @@ function sessionSecret(): string {
 
 export async function signIn(context: BrowserContext): Promise<void> {
   const token = await signSessionToken(
-    { sub: 'e2e-owner', email: 'owner@example.com' },
+    { sub: `e2e-${crypto.randomUUID()}`, email: 'owner@example.com' },
     sessionSecret(),
     new Date(),
   );

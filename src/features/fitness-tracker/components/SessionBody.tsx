@@ -6,8 +6,9 @@ import type { SessionSlot, SessionView, SetLog } from '../domain/types';
 import { SetRow } from './SetRow';
 import styles from './SessionBody.module.css';
 import { useSetDrafts } from './useSetDrafts';
+import type { SetLogging } from './useSetLogging';
 
-type SessionBodyProps = { session: SessionView };
+type SessionBodyProps = { session: SessionView; logging: SetLogging };
 
 function loggedFor(slot: SessionSlot, setNumber: number): SetLog | null {
   const matches = slot.loggedSets.filter((logged) => logged.setNumber === setNumber);
@@ -20,12 +21,14 @@ function SlotSection({
   drafts,
   setDraft,
   clearDraft,
+  logging,
 }: {
   session: SessionView;
   slot: SessionSlot;
   drafts: ReturnType<typeof useSetDrafts>['drafts'];
   setDraft: ReturnType<typeof useSetDrafts>['setDraft'];
   clearDraft: ReturnType<typeof useSetDrafts>['clearDraft'];
+  logging: SetLogging;
 }) {
   const headingId = useId();
   return (
@@ -66,9 +69,16 @@ function SlotSection({
               exerciseName={slot.exercise.name}
               plannedSet={plannedSet}
               logged={loggedFor(slot, plannedSet.setNumber)}
+              optimistic={logging.optimistic[plannedSet.id]}
               draft={drafts[plannedSet.id]}
               onDraftChange={(patch) => setDraft(plannedSet.id, patch)}
-              onLogged={() => clearDraft(plannedSet.id)}
+              onLogStarted={(values) => logging.begin(plannedSet.id, values)}
+              onLogSettled={(succeeded) => {
+                logging.settle(plannedSet.id, succeeded);
+                if (succeeded) {
+                  clearDraft(plannedSet.id);
+                }
+              }}
             />
           ))}
         </tbody>
@@ -77,7 +87,7 @@ function SlotSection({
   );
 }
 
-export function SessionBody({ session }: SessionBodyProps) {
+export function SessionBody({ session, logging }: SessionBodyProps) {
   const { drafts, setDraft, clearDraft } = useSetDrafts(session.id);
 
   return (
@@ -93,6 +103,7 @@ export function SessionBody({ session }: SessionBodyProps) {
             drafts={drafts}
             setDraft={setDraft}
             clearDraft={clearDraft}
+            logging={logging}
           />
         ))
       )}

@@ -60,12 +60,6 @@ test('a non-periodized exercise carries its weights from one block to the next',
 
   await page.getByRole('link', { name: fitnessStrings.navigation.toProgram }).click();
   await page.getByRole('button', { name: fitnessStrings.programEdit.activate }).click();
-  const confirmActivation = page
-    .getByRole('dialog')
-    .getByRole('button', { name: fitnessStrings.programEdit.activateConfirmLabel });
-  if (await confirmActivation.isVisible()) {
-    await confirmActivation.click();
-  }
   await expect(page.getByText(fitnessStrings.programEdit.active, { exact: true })).toBeVisible();
 
   await openBlockWorkout(page, programName, 1, workoutName);
