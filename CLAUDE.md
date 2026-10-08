@@ -89,6 +89,17 @@ Detail lives in skills rather than here, so it loads only when it is needed:
 - **check** — every script, switch, exit code and output shape.
 - **run-app** — running, building and LAN-exposing the app, and iPhone Safari testing.
 - **test** — choosing between Vitest, Playwright and the browser MCP.
+- **create-pr** — `/create-pr`: the gate, end-to-end tests and Worker limits, then commit, push and
+  open the PR.
+
+Process skills from plugins such as Superpowers defer to this file. Wherever one says to run the
+tests, the test command, the linter or the build, use this repo's own skills instead of guessing a
+command — `npm test` alone is only Vitest:
+
+- Verifying work, finishing a task or a plan step, or checking a worktree baseline → the **check**
+  skill, which must exit 0.
+- Writing or running a test, including test-driven red-green steps → the **test** skill.
+- Seeing a change in a real browser → the **run-app** skill.
 
 ## Guidelines
 

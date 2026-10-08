@@ -20,6 +20,7 @@ The individual stages exist for narrower runs:
     pwsh -NoProfile -File scripts/typecheck.ps1
     pwsh -NoProfile -File scripts/test.ps1
     pwsh -NoProfile -File scripts/e2e.ps1          # not part of check.ps1
+    pwsh -NoProfile -File scripts/bundle.ps1       # not part of check.ps1: Worker size and startup
 
 Prefer these over calling the tools directly. They print a one-line summary plus one line per
 problem instead of raw tool output, which is why they exist: an agent reads a short result rather
