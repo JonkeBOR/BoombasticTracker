@@ -17,7 +17,7 @@ folders and shared code feature-agnostic unless something genuinely belongs to o
 - Auth is **Google OAuth for identity only**, exchanged for the app's own signed 90-day session
   cookie. No Google token is kept anywhere.
 
-The binding principles are in [constitution.md](.specify/memory/constitution.md) — Simplicity First
+The binding principles are in [constitution.md](docs/constitution.md) — Simplicity First
 is non-negotiable. Cross-cutting architecture decisions are recorded in
 [docs/architecture/](docs/architecture/).
 
@@ -53,9 +53,7 @@ through JSON route handlers under `src/app/api/fitness/`, each a plain function 
 `src/features/fitness-tracker/components/`, and all text is in `src/lib/strings/fitness.ts`. A
 program has one cycle that only records where the user is (the current block and a pass counter), and
 history lives in the set logs. An exercise slot is periodized, with its own scheme and last weights in each
-block, or not, with one scheme whose last weights carry from block to block. The contract of the operations is
-`specs/002-fitness-domain-model/contracts/fitness-operations.md`, as changed by
-`specs/003-fitness-tracker-ui/contracts/operations-delta.md`. See
+block, or not, with one scheme whose last weights carry from block to block. See
 [006-domain-persistence.md](docs/architecture/006-domain-persistence.md) and
 [007-cycle-as-container-and-bff.md](docs/architecture/007-cycle-as-container-and-bff.md).
 
@@ -91,6 +89,17 @@ Detail lives in skills rather than here, so it loads only when it is needed:
 - **check** — every script, switch, exit code and output shape.
 - **run-app** — running, building and LAN-exposing the app, and iPhone Safari testing.
 - **test** — choosing between Vitest, Playwright and the browser MCP.
+- **create-pr** — `/create-pr`: the gate, end-to-end tests and Worker limits, then commit, push and
+  open the PR.
+
+Process skills from plugins such as Superpowers defer to this file. Wherever one says to run the
+tests, the test command, the linter or the build, use this repo's own skills instead of guessing a
+command — `npm test` alone is only Vitest:
+
+- Verifying work, finishing a task or a plan step, or checking a worktree baseline → the **check**
+  skill, which must exit 0.
+- Writing or running a test, including test-driven red-green steps → the **test** skill.
+- Seeing a change in a real browser → the **run-app** skill.
 
 ## Guidelines
 

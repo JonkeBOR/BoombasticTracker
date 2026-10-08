@@ -9,18 +9,19 @@ import { InlineError } from './InlineError';
 import styles from './SetRow.module.css';
 import { useFitnessAction } from './useFitnessAction';
 import type { SetDraft } from './useSetDrafts';
+import type { LoggedValues } from './useSetLogging';
 
 type SetRowProps = {
   sessionId: string;
   exerciseName: string;
   plannedSet: SessionPlannedSet;
   logged: SetLog | null;
+  optimistic: LoggedValues | undefined;
   draft: SetDraft | undefined;
   onDraftChange: (patch: SetDraft) => void;
-  onLogged: () => void;
+  onLogStarted: (values: LoggedValues) => void;
+  onLogSettled: (succeeded: boolean) => void;
 };
-
-type LoggedValues = Pick<SetLog, 'reps' | 'weightKg'>;
 
 const wholeNumber = /^\d+$/;
 const maxReps = 999;
@@ -40,12 +41,13 @@ export function SetRow({
   exerciseName,
   plannedSet,
   logged,
+  optimistic,
   draft,
   onDraftChange,
-  onLogged,
+  onLogStarted,
+  onLogSettled,
 }: SetRowProps) {
   const [inputError, setInputError] = useState<string | null>(null);
-  const [optimistic, setOptimistic] = useState<LoggedValues | null>(null);
   const action = useFitnessAction();
   const shown = logged ?? optimistic;
 
@@ -87,17 +89,13 @@ export function SetRow({
       return;
     }
     setInputError(null);
-    setOptimistic({ reps, weightKg: weightKg.value });
+    onLogStarted({ reps, weightKg: weightKg.value });
     const succeeded = await action.run('POST', `/api/fitness/sessions/${sessionId}/sets`, {
       plannedSetId: plannedSet.id,
       reps,
       weightKg: weightKg.value,
     });
-    if (succeeded) {
-      onLogged();
-    } else {
-      setOptimistic(null);
-    }
+    onLogSettled(succeeded);
   }
 
   return (

@@ -449,6 +449,48 @@ describe('WorkoutSessionScreen', () => {
       );
     });
 
+    it('waits while a set is being logged, then finishes with no dialog before the page refreshes', async () => {
+      let answerLog: (response: Response) => void = () => undefined;
+      fetchMock.mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          answerLog = resolve;
+        }),
+      );
+      fetchMock.mockResolvedValue(Response.json({ progression: 'none', completedBlockNumber: 2 }));
+      const session = freshSession();
+      render(<WorkoutSessionScreen session={session} />);
+
+      fireEvent.click(logButton(1));
+
+      expect(finishButton().hasAttribute('disabled')).toBe(true);
+      answerLog(Response.json({}));
+      await waitFor(() => expect(finishButton().hasAttribute('disabled')).toBe(false));
+      fireEvent.click(finishButton());
+
+      expect(document.querySelector('dialog[open]')).toBeNull();
+      await waitFor(() =>
+        expect(router.push).toHaveBeenCalledWith(
+          `/fitness-tracker/active/sessions/${session.id}/finished`,
+        ),
+      );
+      expect(fetchMock.mock.calls[1]?.[0]).toBe(`/api/fitness/sessions/${session.id}/finish`);
+    });
+
+    it('asks first again when the only set logged fails to log', async () => {
+      fetchMock.mockResolvedValue(Response.json({ error: 'unexpected' }, { status: 500 }));
+      render(<WorkoutSessionScreen session={freshSession()} />);
+
+      fireEvent.click(logButton(1));
+      await waitFor(() => expect(logButton(1)).toBeDefined());
+      await waitFor(() => expect(finishButton().hasAttribute('disabled')).toBe(false));
+      fireEvent.click(finishButton());
+
+      expect(
+        screen.getByText(fitnessStrings.session.finishEmptyConfirm).closest('dialog[open]'),
+      ).not.toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
     it('US1 scenario 7: goes to the finished view with the completed block when it advanced', async () => {
       fetchMock.mockResolvedValue(
         Response.json({ progression: 'block-advanced', completedBlockNumber: 2 }),

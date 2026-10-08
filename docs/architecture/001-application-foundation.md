@@ -2,8 +2,8 @@
 
 Status: accepted. Date: 2026-09-09.
 
-Cross-cutting decisions made while bootstrapping the application. Feature-scoped decisions belong
-in that feature's Spec Kit documents under `specs/`, not here.
+Cross-cutting decisions made while bootstrapping the application. Feature-scoped decisions live in
+the code and its tests, not here.
 
 ## Web app / PWA rather than a native iOS app
 

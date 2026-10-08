@@ -128,8 +128,9 @@ bundle, so a build on a machine with `.env.local` uploads the local secrets. If 
 unavailable, deploy from a fresh clone that has no `.env*` files.
 
 The Worker's address is `https://onestopshop.<sub>.workers.dev`. Add its callback URI to the
-Google OAuth client (section 2, step 3). The free Workers plan limits the Worker to 3 MiB
-compressed, and the build output reports the size.
+Google OAuth client (section 2, step 3). The free Workers plan allows 64 MiB
+uncompressed, 1 second of startup and 10 ms of CPU per request; see
+[004](docs/architecture/004-hosting-and-persistence.md).
 
 ## 7. Verifying each environment
 

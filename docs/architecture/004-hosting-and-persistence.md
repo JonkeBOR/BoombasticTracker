@@ -6,9 +6,9 @@
 ## Context
 
 Constitution 2.0.0 replaced Google Sheets with a SQLite-family database and chose Cloudflare
-Workers as the host. The first feature, `specs/001-app-foundation`, had to turn that into a running
-app: sign-in, a session, protected pages and a database. The detailed reasoning is in that
-feature's `research.md`; this record keeps the decisions that outlive the feature.
+Workers as the host. The first feature, the app foundation, had to turn that into a running app:
+sign-in, a session, protected pages and a database. This record keeps the decisions that outlive
+the feature.
 
 ## Decision
 
@@ -19,9 +19,17 @@ The app deploys as a single Cloudflare Worker, built by `@opennextjs/cloudflare`
 development sees the same bindings. No incremental cache is configured, because every page reads the
 session cookie and is dynamic.
 
-The free plan limits the Worker to 3 MiB compressed. At the first build the Worker measured
-1.08 MiB compressed (5.2 MiB uncompressed, `npx wrangler deploy --dry-run`). A dependency that
-pushes past the limit needs a deliberate decision.
+The free plan's [limits](https://developers.cloudflare.com/workers/platform/limits/) that matter
+here, as of October 2026:
+
+- **Size**: 64 MiB uncompressed. There is no compressed limit. At the first build the Worker
+  measured 5.2 MiB uncompressed (`npx wrangler deploy --dry-run`), so size is not the constraint.
+- **Startup**: the Worker's top-level code must run within 1 second. A large bundle can fail to
+  deploy on this before it reaches the size limit.
+- **CPU time**: 10 ms per request. Waiting on D1 does not count, but rendering and verifying the
+  session cookie do, and Cloudflare puts authenticated server-side rendering at 10–20 ms. This is
+  the limit most likely to bite. A page that starts failing with exceeded-CPU errors needs a
+  deliberate decision, as does a dependency that adds noticeable work per request.
 
 Two adapter quirks are worked around rather than discovered again:
 
@@ -69,7 +77,7 @@ Migrations are plain SQL files in `migrations/`, applied with
 `wrangler d1 migrations apply --local|--remote`. When this record was written the only migration
 was a baseline holding `SELECT 1;`, because Wrangler refuses a migration with no statements.
 
-Drizzle ORM, deferred here until the first table, arrived with `specs/002-fitness-domain-model`.
+Drizzle ORM, deferred here until the first table, arrived with the fitness domain model.
 The baseline was removed, Drizzle's generated files now live in `migrations/`, and how they meet
 Wrangler is recorded in [006-domain-persistence.md](006-domain-persistence.md).
 
